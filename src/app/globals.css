@@ -1,26 +1,125 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f7f4;
+  --foreground: #1a1a1a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-pastel-yellow: #fef9c3;
+  --color-pastel-pink: #fce7f3;
+  --color-pastel-blue: #dbeafe;
+  --color-pastel-green: #dcfce7;
+  --color-pastel-purple: #f3e8ff;
+  --color-pastel-orange: #ffedd5;
+  --color-pastel-teal: #ccfbf1;
+  --color-pastel-red: #fee2e2;
+
+  --font-caveat: 'Caveat', cursive;
+  --font-lora: 'Lora', serif;
+
+  --shadow-paper: 2px 4px 12px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* Pop-in animation */
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Pulse border for search focus */
+@keyframes pulse-border {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.5); }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-pulse-border {
+  animation: pulse-border 0.8s ease-in-out 3;
+}
+
+/* Canvas grid dot pattern */
+.canvas-grid {
+  background-image: radial-gradient(circle, #c4c4c4 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Paper texture for sticky notes */
+.paper-texture {
+  position: relative;
+}
+
+.paper-texture::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.4;
+}
+
+/* Lined paper for standard notes */
+.lined-paper {
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    #b8c4d0 27px,
+    #b8c4d0 28px
+  );
+  background-attachment: local;
+}
+
+/* 3D Book perspective */
+.book-cover {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+.book-spine {
+  transform: rotateY(-15deg);
+  transform-origin: left center;
+  transition: transform 0.3s ease;
+}
+
+.book-spine:hover {
+  transform: rotateY(-25deg);
+}
+
+/* Selection overlay */
+.selection-ring {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Canvas object hover */
+.canvas-obj:hover .anchor-points {
+  opacity: 1;
+}
+
+.anchor-points {
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
