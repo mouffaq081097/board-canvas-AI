@@ -43,6 +43,7 @@ export default function AnchorPoint({ objectId, side }: Props) {
 
   return (
     <div
+      data-anchor-point="true"
       className="anchor-points absolute z-10"
       style={POSITIONS[side]}
       onClick={handleClick}

@@ -44,12 +44,12 @@ function ShapeIcon({ shape, active }: { shape: typeof SHAPES[number]; active: bo
     return (
       <svg viewBox="0 0 100 100" width="24" height="24">
         <defs>
-          <marker id={`picker-arrow-${active ? 'active' : 'inactive'}`} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill={strokeColor} />
+          <marker id={`picker-arrow-${active ? 'active' : 'inactive'}`} markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto">
+            <polygon points="0 0, 10 5, 0 10" fill={strokeColor} />
           </marker>
         </defs>
         <line
-          x1="5" y1="50" x2="82" y2="50"
+          x1="5" y1="50" x2="80" y2="50"
           stroke={strokeColor}
           strokeWidth="8"
           markerEnd={`url(#picker-arrow-${active ? 'active' : 'inactive'})`}
@@ -79,17 +79,16 @@ export default function ShapePicker({ activeShapeType, onSelect, onClose }: Shap
   }, [onClose]);
 
   return (
-    <AnimatePresence>
-      <motion.div
-        ref={ref}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="absolute left-full top-0 ml-2 z-50 bg-white rounded-2xl shadow-lg p-3"
-        style={{ transformOrigin: 'left top' }}
-      >
-        <div className="grid grid-cols-4 gap-2">
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, scale: 0.9, x: -10 }}
+      animate={{ opacity: 1, scale: 1, x: 0 }}
+      exit={{ opacity: 0, scale: 0.9, x: -10 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      className="z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-3"
+      style={{ transformOrigin: 'left center' }}
+    >
+      <div className="grid grid-cols-4 gap-2">
           {SHAPES.map((shape) => {
             const isActive = shape.type === activeShapeType;
             return (
@@ -123,6 +122,5 @@ export default function ShapePicker({ activeShapeType, onSelect, onClose }: Shap
           })}
         </div>
       </motion.div>
-    </AnimatePresence>
   );
 }

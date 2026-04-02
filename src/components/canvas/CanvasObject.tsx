@@ -32,6 +32,7 @@ const ResizeHandle = ({ pos, onPointerDown }: { pos: string; onPointerDown: (e: 
 
   return (
     <div
+      data-resize-handle="true"
       className={`absolute w-4 h-4 bg-white border-2 border-indigo-500 rounded-full z-50 pointer-events-auto hover:bg-indigo-50 transition-colors hover:shadow-[0_0_0_3px_rgba(99,102,241,0.3)] ${positionClasses}`}
       onPointerDown={(e) => onPointerDown(e, pos)}
     />
@@ -105,7 +106,11 @@ function CanvasObject({ objectId }: Props) {
         ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(target.tagName) ||
         target.isContentEditable;
 
-      if (!isEditable) {
+      const isControl = target.closest('[data-resize-handle]') || 
+                        target.closest('[data-rotate-handle]') || 
+                        target.closest('[data-anchor-point]');
+
+      if (!isEditable && !isControl) {
         // Drag from anywhere on the object — stop propagation so canvas doesn't also handle it
         e.stopPropagation();
         selectObject(objectId, e.shiftKey);
@@ -176,9 +181,9 @@ function CanvasObject({ objectId }: Props) {
       let dX_local = 0;
       let dY_local = 0;
 
-      if (handle.includes('e')) {
+      if (handle.includes('e') || handle.includes('r')) {
         newW = Math.max(40, startW + lDx);
-      } else if (handle.includes('w')) {
+      } else if (handle.includes('w') || handle.includes('l')) {
         const delta = Math.min(startW - 40, lDx);
         newW = startW - delta;
         dX_local = delta;
@@ -356,6 +361,7 @@ function CanvasObject({ objectId }: Props) {
 
           {/* Rotation Handle */}
           <div
+            data-rotate-handle="true"
             className="absolute -top-12 left-1/2 -translate-x-1/2 w-8 h-8 flex flex-col items-center cursor-grab active:cursor-grabbing group/rotate pointer-events-auto"
             onPointerDown={handleRotate}
           >

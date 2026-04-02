@@ -171,7 +171,32 @@ export default function Canvas() {
     return () => el.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
+  // Track active pointers for multi-touch gestures
+  const activePointers = useRef<Map<number, { x: number, y: number }>>(new Map());
+  const initialPinchDistance = useRef<number | null>(null);
+  const initialPinchScale = useRef<number | null>(null);
+  const lastPinchMidpoint = useRef<{ x: number, y: number } | null>(null);
+
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Handle two-finger pinch/pan initiation
+    if (activePointers.current.size === 2) {
+      isPanning.current = false;
+      isSelecting.current = false;
+      setSelectionRect(null);
+      const points = Array.from(activePointers.current.values());
+      const dist = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      initialPinchDistance.current = dist;
+      initialPinchScale.current = vpRef.current.scale;
+      lastPinchMidpoint.current = {
+        x: (points[0].x + points[1].x) / 2,
+        y: (points[0].y + points[1].y) / 2,
+      };
+      containerRef.current?.setPointerCapture(e.pointerId);
+      return;
+    }
+
     // Standard middle click always pans
     if (e.button === 1) {
       isPanning.current = true;
@@ -185,7 +210,11 @@ export default function Canvas() {
     
     const tool = useCanvasStore.getState().activeTool;
 
-    if (tool === 'hand') {
+    // Two-finger gesture (like a trackpad scroll) might trigger a pan without explicitly activating hand tool.
+    // However, touch typically fires wheel events for scrolling if not prevented, but we have touch-action: none.
+    // We already handle 2+ fingers above. This is for 1 finger.
+    if (tool === 'hand' || (e.pointerType === 'touch' && activeTool === 'pointer' && !e.shiftKey)) {
+      // By default, touch on the background with pointer tool will pan, matching common tablet behavior.
       isPanning.current = true;
       lastPointer.current = { x: e.clientX, y: e.clientY };
       containerRef.current?.setPointerCapture(e.pointerId);
@@ -223,8 +252,6 @@ export default function Canvas() {
       case 'arrow': createShape(pos.x - 60, pos.y - 30, 'arrow'); break;
       case 'shape': {
         const offset = 60;
-        // createShape signature only covers the 3 legacy types, but the store
-        // just passes shapeType into metadata — cast is safe here.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         createShape(pos.x - offset, pos.y - offset, shapeType as any);
         setTool('pointer');
@@ -233,9 +260,49 @@ export default function Canvas() {
       case 'table': addTable(pos.x - 160, pos.y - 120); setTool('pointer'); break;
       case 'image': addImage(pos.x - 100, pos.y - 100); setTool('pointer'); break;
     }
-  }, [clearSelection, createStickyNote, createStandardNote, createBook, createShape, addTable, addImage]);
+  }, [clearSelection, createStickyNote, createStandardNote, createBook, createShape, addTable, addImage, activeTool]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (activePointers.current.has(e.pointerId)) {
+      activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
+    // Handle two-finger pinch/pan
+    if (activePointers.current.size === 2) {
+      const points = Array.from(activePointers.current.values());
+      const dist = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+      const midX = (points[0].x + points[1].x) / 2;
+      const midY = (points[0].y + points[1].y) / 2;
+
+      const vp = vpRef.current;
+      const container = containerRef.current;
+      
+      if (container && initialPinchDistance.current !== null && initialPinchScale.current !== null && lastPinchMidpoint.current !== null) {
+        const rect = container.getBoundingClientRect();
+        
+        // Calculate new zoom
+        const scaleFactor = dist / initialPinchDistance.current;
+        const newScale = clamp(initialPinchScale.current * scaleFactor, 0.1, 4);
+        
+        // Calculate pan delta from previous midpoint
+        const deltaX = midX - lastPinchMidpoint.current.x;
+        const deltaY = midY - lastPinchMidpoint.current.y;
+        
+        // Calculate zoom focus based on current midpoint
+        const mouseX = midX - rect.left;
+        const mouseY = midY - rect.top;
+        const ratio = newScale / vp.scale;
+        
+        // Apply both pan (delta) and zoom (ratio) transformations
+        const newX = mouseX - (mouseX - vp.x) * ratio + deltaX;
+        const newY = mouseY - (mouseY - vp.y) * ratio + deltaY;
+
+        applyViewport({ scale: newScale, x: newX, y: newY });
+        lastPinchMidpoint.current = { x: midX, y: midY };
+      }
+      return;
+    }
+
     if (isSelecting.current) {
       const container = containerRef.current;
       if (!container) return;
@@ -260,12 +327,29 @@ export default function Canvas() {
     applyViewport({ ...vp, x: vp.x + dx, y: vp.y + dy });
   }, [applyViewport, selectObjectsInRect]);
 
-  const handlePointerUp = useCallback(() => {
-    isPanning.current = false;
-    isSelecting.current = false;
-    setSelectionRect(null);
-    syncViewport();
+  const removePointer = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    activePointers.current.delete(e.pointerId);
+    
+    if (activePointers.current.size < 2) {
+      initialPinchDistance.current = null;
+      initialPinchScale.current = null;
+      lastPinchMidpoint.current = null;
+    }
+    
+    // If one finger remains, update lastPointer to prevent jumping if panning resumes
+    if (activePointers.current.size === 1) {
+      const remainingPoint = Array.from(activePointers.current.values())[0];
+      lastPointer.current = { x: remainingPoint.x, y: remainingPoint.y };
+    } else if (activePointers.current.size === 0) {
+      isPanning.current = false;
+      isSelecting.current = false;
+      setSelectionRect(null);
+      syncViewport();
+    }
   }, [syncViewport]);
+
+  const handlePointerUp = removePointer;
+  const handlePointerCancel = removePointer;
 
   const activeTool_ = activeTool; // snapshot for render
   const cursorClass = activeTool_ === 'pointer' ? 'cursor-default'
@@ -282,6 +366,7 @@ export default function Canvas() {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       style={{ touchAction: 'none' }}
     >
       {/* Grid — all rendering driven by applyViewport via ref */}

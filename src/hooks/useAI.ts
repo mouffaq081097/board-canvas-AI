@@ -19,10 +19,17 @@ export function useAI() {
     setError('');
 
     try {
+      let imageBase64;
+      const firstObj = selectedObjects[0];
+      
+      if ((action === 'ocr' || action === 'sketch') && firstObj.type === 'image' && firstObj.metadata?.imageUrl?.startsWith('data:image')) {
+        imageBase64 = firstObj.metadata.imageUrl;
+      }
+
       const res = await fetch(`/api/ai/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ objects: selectedObjects }),
+        body: JSON.stringify({ objects: selectedObjects, imageBase64 }),
       });
 
       if (!res.ok) throw new Error(await res.text());
