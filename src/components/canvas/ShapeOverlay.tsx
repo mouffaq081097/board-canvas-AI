@@ -85,6 +85,61 @@ export default function ShapeOverlay({ object }: Props) {
           />
         </>
       )}
+      {shapeType === 'triangle' && (
+        <svg viewBox="0 0 100 100" width={w} height={h} preserveAspectRatio="none">
+          <path
+            d="M 50 5 L 95 90 L 5 90 Z"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      )}
+      {shapeType === 'diamond' && (
+        <svg viewBox="0 0 100 100" width={w} height={h} preserveAspectRatio="none">
+          <path
+            d="M 50 5 L 95 50 L 50 95 L 5 50 Z"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      )}
+      {shapeType === 'star' && (
+        <svg viewBox="0 0 100 100" width={w} height={h} preserveAspectRatio="none">
+          <path
+            d="M 50 5 L 61 35 L 95 35 L 68 57 L 79 91 L 50 70 L 21 91 L 32 57 L 5 35 L 39 35 Z"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      )}
+      {shapeType === 'hexagon' && (
+        <svg viewBox="0 0 100 100" width={w} height={h} preserveAspectRatio="none">
+          <path
+            d="M 25 5 L 75 5 L 95 45 L 75 90 L 25 90 L 5 45 Z"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      )}
+      {shapeType === 'pentagon' && (
+        <svg viewBox="0 0 100 100" width={w} height={h} preserveAspectRatio="none">
+          <path
+            d="M 50 5 L 95 36 L 79 91 L 21 91 L 5 36 Z"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      )}
 
       {/* Editable label inside shape */}
       {shapeType !== 'arrow' && (
