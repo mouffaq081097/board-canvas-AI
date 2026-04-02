@@ -66,6 +66,7 @@ export default function Toolbar() {
   } = useCanvasStore();
 
   const [showShapePicker, setShowShapePicker] = useState(false);
+  const [shapePickerPos, setShapePickerPos] = useState({ top: 0, left: 0 });
   const shapeButtonRef = useRef<HTMLDivElement>(null);
 
   const cycleGrid = () => {
@@ -90,6 +91,20 @@ export default function Toolbar() {
   return (
     /* Anchor: left-4, below 52px navbar, above 8px bottom clearance, centered vertically */
     <div className="absolute left-4 z-[100] flex flex-col justify-center" style={{ top: 60, bottom: 8 }}>
+      {/* ShapePicker rendered here — fixed position so it escapes overflow-y-auto clipping */}
+      {showShapePicker && (
+        <div style={{ position: 'fixed', top: shapePickerPos.top, left: shapePickerPos.left, zIndex: 200 }}>
+          <ShapePicker
+            activeShapeType={activeShapeType}
+            onSelect={(shape) => {
+              setActiveShapeType(shape as Parameters<typeof setActiveShapeType>[0]);
+              setActiveTool('shape');
+              setShowShapePicker(false);
+            }}
+            onClose={() => setShowShapePicker(false)}
+          />
+        </div>
+      )}
       <div className="flex flex-col gap-0.5 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-1.5 overflow-y-auto"
         style={{ maxHeight: '100%', scrollbarWidth: 'none' }}
       >
@@ -112,7 +127,13 @@ export default function Toolbar() {
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
                 : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
             }`}
-            onClick={() => setShowShapePicker(!showShapePicker)}
+            onClick={() => {
+              if (!showShapePicker && shapeButtonRef.current) {
+                const rect = shapeButtonRef.current.getBoundingClientRect();
+                setShapePickerPos({ top: rect.top, left: rect.right + 8 });
+              }
+              setShowShapePicker(v => !v);
+            }}
             title="Shapes"
           >
             <Shapes size={16} />
@@ -120,17 +141,6 @@ export default function Toolbar() {
               Shapes
             </div>
           </button>
-          {showShapePicker && (
-            <ShapePicker
-              activeShapeType={activeShapeType}
-              onSelect={(shape) => {
-                setActiveShapeType(shape as Parameters<typeof setActiveShapeType>[0]);
-                setActiveTool('shape');
-                setShowShapePicker(false);
-              }}
-              onClose={() => setShowShapePicker(false)}
-            />
-          )}
         </div>
 
         {/* Table tool */}
