@@ -23,7 +23,7 @@ interface Props {
 
 export default function BookModal({ object, onClose }: Props) {
   const { updateObject, addBookPage, updateBookPage, deleteBookPage, setIsBookModalOpen, setFocusedObjectId } = useCanvasStore();
-  const pages: BookPage[] = object.metadata?.pages || [{ id: uuidv4(), content: '' }];
+  const pages: BookPage[] = object.metadata?.pages || [{ id: uuidv4(), title: 'Page 1', content: '' }];
   const [currentPage, setCurrentPage] = useState(0);
   const [direction, setDirection] = useState(0);
   const [title, setTitle] = useState(object.content);

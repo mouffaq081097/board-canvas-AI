@@ -1,16 +1,11 @@
-export type ObjectType = 'sticky' | 'note' | 'book' | 'shape' | 'drawing';
+export type ObjectType = 'sticky' | 'note' | 'book' | 'shape' | 'drawing' | 'table' | 'image';
 
 export type ToolType =
-  | 'pointer'
-  | 'hand'
-  | 'sticky'
-  | 'note'
-  | 'book'
-  | 'circle'
-  | 'rectangle'
-  | 'arrow'
-  | 'pen'
-  | 'eraser';
+  | 'pointer' | 'hand' | 'sticky' | 'note' | 'book'
+  | 'shape'   // unified shape tool (replaces circle/rectangle/arrow)
+  | 'circle' | 'rectangle' | 'arrow'  // keep for backwards compat
+  | 'pen' | 'eraser'
+  | 'table' | 'image';
 
 export type AnchorSide = 'top' | 'right' | 'bottom' | 'left';
 
@@ -31,7 +26,15 @@ export interface ObjectStyle {
 
 export interface BookPage {
   id: string;
+  title: string;   // editable page title
   content: string;
+}
+
+export interface BookSection {
+  id: string;
+  title: string;
+  color: string;
+  pages: BookPage[];
 }
 
 export interface TodoItem {
@@ -42,11 +45,23 @@ export interface TodoItem {
 
 export interface ObjectMetadata {
   pages?: BookPage[];
-  shapeType?: 'circle' | 'rectangle' | 'arrow';
+  sections?: BookSection[];  // OneNote-style sections, replaces pages[]
+  shapeType?: 'circle' | 'rectangle' | 'arrow' | 'triangle' | 'diamond' | 'star' | 'hexagon' | 'pentagon';
   pathData?: string;
   ocrText?: string;
   todoMode?: boolean;
   todoItems?: TodoItem[];
+  imageUrl?: string;
+  imageAlt?: string;
+  isGif?: boolean;
+  tableData?: {
+    rows: number;
+    cols: number;
+    cells: string[][];
+    colWidths?: number[];
+    headers?: string[];
+    cellStyles?: Record<string, { bold?: boolean; color?: string }>;
+  };
 }
 
 export interface CanvasObject {

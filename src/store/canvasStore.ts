@@ -17,6 +17,7 @@ interface CanvasStore {
   connections: Connection[];
   selectedIds: string[];
   activeTool: ToolType;
+  activeShapeType: 'circle' | 'rectangle' | 'arrow' | 'triangle' | 'diamond' | 'star' | 'hexagon' | 'pentagon';
   viewport: Viewport;
   isDrawing: boolean;
   connectingFrom: { id: string; anchor: AnchorSide } | null;
@@ -47,6 +48,7 @@ interface CanvasStore {
 
   // Tools & viewport
   setActiveTool: (tool: ToolType) => void;
+  setActiveShapeType: (shape: CanvasStore['activeShapeType']) => void;
   setViewport: (viewport: Partial<Viewport>) => void;
   setIsDrawing: (drawing: boolean) => void;
   setConnectingFrom: (data: { id: string; anchor: AnchorSide } | null) => void;
@@ -72,11 +74,19 @@ interface CanvasStore {
   createStandardNote: (x: number, y: number) => string;
   createBook: (x: number, y: number) => string;
   createShape: (x: number, y: number, shapeType: 'circle' | 'rectangle' | 'arrow') => string;
+  addTable: (x: number, y: number) => string;
+  addImage: (x: number, y: number) => string;
 
   // Book Page helpers
-  addBookPage: (bookId: string) => void;
+  addBookPage: (bookId: string, sectionId?: string) => void;
   updateBookPage: (bookId: string, pageId: string, content: string) => void;
   deleteBookPage: (bookId: string, pageId: string) => void;
+  updateBookPageTitle: (bookId: string, sectionId: string, pageId: string, title: string) => void;
+
+  // Book Section helpers
+  addBookSection: (bookId: string, title: string, color: string) => void;
+  deleteBookSection: (bookId: string, sectionId: string) => void;
+  renameBookSection: (bookId: string, sectionId: string, newTitle: string) => void;
 }
 
 export const useCanvasStore = create<CanvasStore>((set, get) => ({
@@ -84,6 +94,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   connections: [],
   selectedIds: [],
   activeTool: 'pointer',
+  activeShapeType: 'rectangle',
   viewport: { x: 0, y: 0, scale: 1 },
   isDrawing: false,
   connectingFrom: null,
@@ -189,6 +200,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setSelectedIds: (ids) => set({ selectedIds: ids }),
 
   setActiveTool: (tool) => set({ activeTool: tool }),
+
+  setActiveShapeType: (shape) => set({ activeShapeType: shape }),
 
   setViewport: (viewport) =>
     set((state) => ({ viewport: { ...state.viewport, ...viewport } })),
@@ -394,7 +407,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         spineColor: '#3730a3',
       },
       metadata: {
-        pages: [{ id: uuidv4(), content: '' }],
+        pages: [{ id: uuidv4(), title: 'Page 1', content: '' }],
       },
     });
   },
@@ -417,20 +430,82 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     });
   },
 
-  addBookPage: (bookId) => {
+  addTable: (x, y) => {
+    return get().addObject({
+      type: 'table' as ObjectType,
+      x,
+      y,
+      width: 320,
+      height: 240,
+      content: '',
+      style: {},
+      metadata: {
+        tableData: {
+          rows: 3,
+          cols: 3,
+          cells: [['', '', ''], ['', '', ''], ['', '', '']],
+          headers: ['Column 1', 'Column 2', 'Column 3'],
+        },
+      },
+    });
+  },
+
+  addImage: (x, y) => {
+    return get().addObject({
+      type: 'image' as ObjectType,
+      x,
+      y,
+      width: 200,
+      height: 200,
+      content: '',
+      style: {},
+      metadata: {
+        imageUrl: undefined,
+        isGif: false,
+      },
+    });
+  },
+
+  addBookPage: (bookId, sectionId) => {
     set((state) => ({
       objects: state.objects.map((o) => {
-        if (o.id === bookId) {
-          const pages = o.metadata?.pages || [];
+        if (o.id !== bookId) return o;
+
+        const newPage = { id: uuidv4(), title: 'Untitled Page', content: '' };
+
+        // If book has sections, add to the matching section (or first section)
+        if (o.metadata?.sections && o.metadata.sections.length > 0) {
+          const targetSectionId = sectionId ?? o.metadata.sections[0].id;
           return {
             ...o,
             metadata: {
               ...o.metadata,
-              pages: [...pages, { id: uuidv4(), content: '' }],
+              sections: o.metadata.sections.map((s) =>
+                s.id === targetSectionId
+                  ? { ...s, pages: [...s.pages, newPage] }
+                  : s
+              ),
             },
           };
         }
-        return o;
+
+        // Backwards compat: no sections yet, add to legacy pages[]
+        // and also create a first section from existing pages
+        const existingPages = o.metadata?.pages || [];
+        const firstSection = {
+          id: uuidv4(),
+          title: 'Section 1',
+          color: '#6366f1',
+          pages: [...existingPages, newPage],
+        };
+        return {
+          ...o,
+          metadata: {
+            ...o.metadata,
+            pages: [...existingPages, newPage],
+            sections: [firstSection],
+          },
+        };
       }),
     }));
   },
@@ -438,19 +513,36 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   updateBookPage: (bookId, pageId, content) => {
     set((state) => ({
       objects: state.objects.map((o) => {
-        if (o.id === bookId) {
-          const pages = o.metadata?.pages?.map((p) =>
-            p.id === pageId ? { ...p, content } : p
-          );
+        if (o.id !== bookId) return o;
+
+        // Update in sections if present
+        if (o.metadata?.sections) {
           return {
             ...o,
             metadata: {
               ...o.metadata,
-              pages,
+              sections: o.metadata.sections.map((s) => ({
+                ...s,
+                pages: s.pages.map((p) => (p.id === pageId ? { ...p, content } : p)),
+              })),
+              // Also update legacy pages[] for backwards compat
+              pages: o.metadata.pages?.map((p) =>
+                p.id === pageId ? { ...p, content } : p
+              ),
             },
           };
         }
-        return o;
+
+        const pages = o.metadata?.pages?.map((p) =>
+          p.id === pageId ? { ...p, content } : p
+        );
+        return {
+          ...o,
+          metadata: {
+            ...o.metadata,
+            pages,
+          },
+        };
       }),
     }));
   },
@@ -458,17 +550,111 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   deleteBookPage: (bookId, pageId) => {
     set((state) => ({
       objects: state.objects.map((o) => {
-        if (o.id === bookId) {
-          const pages = o.metadata?.pages?.filter((p) => p.id !== pageId);
+        if (o.id !== bookId) return o;
+
+        if (o.metadata?.sections) {
           return {
             ...o,
             metadata: {
               ...o.metadata,
-              pages,
+              sections: o.metadata.sections.map((s) => ({
+                ...s,
+                pages: s.pages.filter((p) => p.id !== pageId),
+              })),
+              pages: o.metadata.pages?.filter((p) => p.id !== pageId),
             },
           };
         }
-        return o;
+
+        const pages = o.metadata?.pages?.filter((p) => p.id !== pageId);
+        return {
+          ...o,
+          metadata: {
+            ...o.metadata,
+            pages,
+          },
+        };
+      }),
+    }));
+  },
+
+  updateBookPageTitle: (bookId, sectionId, pageId, title) => {
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (o.id !== bookId) return o;
+        return {
+          ...o,
+          metadata: {
+            ...o.metadata,
+            sections: o.metadata?.sections?.map((s) =>
+              s.id === sectionId
+                ? {
+                    ...s,
+                    pages: s.pages.map((p) => (p.id === pageId ? { ...p, title } : p)),
+                  }
+                : s
+            ),
+            pages: o.metadata?.pages?.map((p) =>
+              p.id === pageId ? { ...p, title } : p
+            ),
+          },
+        };
+      }),
+    }));
+  },
+
+  addBookSection: (bookId, title, color) => {
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (o.id !== bookId) return o;
+        const newSection = {
+          id: uuidv4(),
+          title,
+          color,
+          pages: [{ id: uuidv4(), title: 'Untitled Page', content: '' }],
+        };
+        return {
+          ...o,
+          metadata: {
+            ...o.metadata,
+            sections: [...(o.metadata?.sections || []), newSection],
+          },
+        };
+      }),
+    }));
+  },
+
+  deleteBookSection: (bookId, sectionId) => {
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (o.id !== bookId) return o;
+        const sections = o.metadata?.sections || [];
+        // Only delete if more than 1 section exists
+        if (sections.length <= 1) return o;
+        return {
+          ...o,
+          metadata: {
+            ...o.metadata,
+            sections: sections.filter((s) => s.id !== sectionId),
+          },
+        };
+      }),
+    }));
+  },
+
+  renameBookSection: (bookId, sectionId, newTitle) => {
+    set((state) => ({
+      objects: state.objects.map((o) => {
+        if (o.id !== bookId) return o;
+        return {
+          ...o,
+          metadata: {
+            ...o.metadata,
+            sections: o.metadata?.sections?.map((s) =>
+              s.id === sectionId ? { ...s, title: newTitle } : s
+            ),
+          },
+        };
       }),
     }));
   },
