@@ -43,25 +43,32 @@ export default function Book({ object }: Props) {
             background: coverImage
               ? `url(${coverImage}) center/cover`
               : coverColor,
-            boxShadow: `
-              -4px 0 8px rgba(0,0,0,0.3),
-              inset -3px 0 6px rgba(0,0,0,0.2),
-              4px 4px 16px rgba(0,0,0,0.3)
-            `,
+            boxShadow: `0 20px 40px rgba(0,0,0,0.25), 0 4px 8px rgba(0,0,0,0.15)`,
             borderRadius: '2px 4px 4px 2px',
           }}
         >
           {/* Spine */}
           <div
-            className="absolute left-0 top-0 bottom-0 w-5"
+            className="absolute left-0 top-0 bottom-0"
             style={{
+              width: '8px',
               background: spineColor,
               boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.2)',
+              backgroundImage: `${spineColor}, repeating-linear-gradient(to bottom, transparent, transparent 8px, rgba(0,0,0,0.05) 8px, rgba(0,0,0,0.05) 9px)`,
+            }}
+          />
+
+          {/* Cover gradient sheen overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%)',
+              borderRadius: 'inherit',
             }}
           />
 
           {/* Cover content */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6 ml-5">
+          <div className="flex-1 flex flex-col items-center justify-center px-6 ml-2">
             <BookOpen size={28} className="text-white/80 mb-2" />
             <p className="text-white text-center text-sm font-semibold leading-snug line-clamp-3 drop-shadow">
               {object.content || 'Untitled'}
@@ -70,7 +77,7 @@ export default function Book({ object }: Props) {
 
           {/* Bottom accent */}
           <div
-            className="h-8 w-full ml-5 flex items-center justify-end pr-3"
+            className="h-8 w-full ml-2 flex items-center justify-end pr-3"
             style={{ background: 'rgba(0,0,0,0.15)' }}
           >
             <span className="text-white/60 text-xs">Double-click to open</span>
