@@ -73,7 +73,7 @@ interface CanvasStore {
   createStickyNote: (x: number, y: number) => string;
   createStandardNote: (x: number, y: number) => string;
   createBook: (x: number, y: number) => string;
-  createShape: (x: number, y: number, shapeType: 'circle' | 'rectangle' | 'arrow') => string;
+  createShape: (x: number, y: number, shapeType: 'circle' | 'rectangle' | 'arrow' | 'triangle' | 'diamond' | 'star' | 'hexagon' | 'pentagon') => string;
   addTable: (x: number, y: number) => string;
   addImage: (x: number, y: number) => string;
 

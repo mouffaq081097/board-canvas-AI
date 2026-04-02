@@ -122,6 +122,7 @@ export default function BookModal({ object, onClose }: Props) {
 
   // --- Tiptap Editor ---
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,

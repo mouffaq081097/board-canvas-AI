@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, memo, useState } from 'react';
+import { useRef, memo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { RotateCcw, Lock } from 'lucide-react';
 import { useCanvasStore } from '@/store/canvasStore';
@@ -65,15 +65,25 @@ function CanvasObject({ objectId }: Props) {
   });
 
   const [isHovered, setIsHovered] = useState(false);
+  const [wInput, setWInput] = useState(Math.round(object?.width ?? 0));
+  const [hInput, setHInput] = useState(Math.round(object?.height ?? 0));
 
   if (!object) return null;
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  // Sync local W/H state when object dimensions change externally (e.g. resize handles)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    setWInput(Math.round(object.width));
+    setHInput(Math.round(object.height));
+  }, [object.width, object.height]);
+
+  // Capture-phase handler: fires before any child stopPropagation, enabling drag from anywhere on the object
+  const handlePointerDownCapture = (e: React.PointerEvent) => {
     if (activeTool === 'pen' || activeTool === 'eraser') return;
     if (isLocked && activeTool !== 'arrow') { e.stopPropagation(); return; }
-    e.stopPropagation();
 
     if (activeTool === 'arrow') {
+      e.stopPropagation();
       if (!connectingFrom) {
         setConnectingFrom({ id: objectId, anchor: 'right' });
       } else if (connectingFrom.id !== objectId) {
@@ -90,16 +100,31 @@ function CanvasObject({ objectId }: Props) {
     }
 
     if (activeTool === 'pointer') {
-      selectObject(objectId, e.shiftKey);
-      dragState.current = {
-        active: true,
-        startClientX: e.clientX,
-        startClientY: e.clientY,
-        origX: object.x,
-        origY: object.y,
-      };
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      const target = e.target as HTMLElement;
+      const isEditable =
+        ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(target.tagName) ||
+        target.isContentEditable;
+
+      if (!isEditable) {
+        // Drag from anywhere on the object — stop propagation so canvas doesn't also handle it
+        e.stopPropagation();
+        selectObject(objectId, e.shiftKey);
+        dragState.current = {
+          active: true,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          origX: object.x,
+          origY: object.y,
+        };
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      }
+      // If editable element: let event through so textarea/input gets focus
     }
+  };
+
+  // Keep the bubble-phase handler for any cases that need it (currently unused but safe to keep)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // All logic moved to capture phase above
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
@@ -233,6 +258,7 @@ function CanvasObject({ objectId }: Props) {
         cursor: isLocked ? 'not-allowed' : activeTool === 'pointer' ? 'grab' : 'default',
         willChange: 'transform',
       }}
+      onPointerDownCapture={handlePointerDownCapture}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -286,44 +312,31 @@ function CanvasObject({ objectId }: Props) {
             <span className="text-[10px] font-mono text-gray-400">W</span>
             <input
               type="number"
-              value={Math.round(object.width)}
+              value={wInput}
               className="w-14 text-[11px] font-mono text-gray-700 text-center bg-transparent outline-none border-none"
-              onChange={(e) => {/* handled on blur/enter */}}
-              onBlur={(e) => {
-                const val = parseInt(e.target.value);
-                if (!isNaN(val) && val >= 40) {
-                  updateObject(object.id, { width: val });
-                }
+              onChange={(e) => setWInput(parseInt(e.target.value) || 0)}
+              onBlur={() => {
+                if (!isNaN(wInput) && wInput >= 40) updateObject(object.id, { width: wInput });
+                else setWInput(Math.round(object.width));
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const val = parseInt((e.target as HTMLInputElement).value);
-                  if (!isNaN(val) && val >= 40) {
-                    updateObject(object.id, { width: val });
-                  }
-                  (e.target as HTMLInputElement).blur();
-                }
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') { setWInput(Math.round(object.width)); (e.target as HTMLInputElement).blur(); }
               }}
             />
             <span className="text-[10px] font-mono text-gray-300">×</span>
             <input
               type="number"
-              value={Math.round(object.height)}
+              value={hInput}
               className="w-14 text-[11px] font-mono text-gray-700 text-center bg-transparent outline-none border-none"
-              onBlur={(e) => {
-                const val = parseInt(e.target.value);
-                if (!isNaN(val) && val >= 40) {
-                  updateObject(object.id, { height: val });
-                }
+              onChange={(e) => setHInput(parseInt(e.target.value) || 0)}
+              onBlur={() => {
+                if (!isNaN(hInput) && hInput >= 40) updateObject(object.id, { height: hInput });
+                else setHInput(Math.round(object.height));
               }}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  const val = parseInt((e.target as HTMLInputElement).value);
-                  if (!isNaN(val) && val >= 40) {
-                    updateObject(object.id, { height: val });
-                  }
-                  (e.target as HTMLInputElement).blur();
-                }
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') { setHInput(Math.round(object.height)); (e.target as HTMLInputElement).blur(); }
               }}
             />
             <span className="text-[10px] font-mono text-gray-400">H</span>
