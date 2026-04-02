@@ -1,34 +1,106 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '@/store/canvasStore';
-import { motion, useDragControls, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GripHorizontal, Maximize2, Minimize2 } from 'lucide-react';
 import { CanvasObject } from '@/types/canvas';
 
+const TYPE_COLORS: Record<string, string> = {
+  sticky: '#f59e0b',   // amber
+  note: '#64748b',     // slate
+  book: '#8b5cf6',     // purple
+  shape: '#0ea5e9',    // sky blue
+  drawing: '#f43f5e',  // rose
+  table: '#10b981',    // emerald
+  image: '#f97316',    // orange
+};
+
 function getMinimapColor(obj: CanvasObject): string {
-  switch (obj.type) {
-    case 'sticky':  return '#f59e0b';
-    case 'note':    return '#d1d5db';
-    case 'book':    return obj.style.backgroundColor ?? '#6366f1';
-    case 'shape':   return '#64748b';
-    case 'drawing': return '#f43f5e';
-    default:        return '#6366f1';
-  }
+  return TYPE_COLORS[obj.type] ?? '#6366f1';
 }
 
 const MINIMAP_SIZE = 180; // px
 const PADDING = 20;
+const NAVBAR_HEIGHT = 56;
+const MAP_MARGIN = 16;
 
-type Corner = 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+function getCorners(mapW: number, mapH: number) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  return [
+    { x: MAP_MARGIN, y: MAP_MARGIN + NAVBAR_HEIGHT },                         // top-left
+    { x: vw - mapW - MAP_MARGIN, y: MAP_MARGIN + NAVBAR_HEIGHT },             // top-right
+    { x: MAP_MARGIN, y: vh - mapH - MAP_MARGIN },                             // bottom-left
+    { x: vw - mapW - MAP_MARGIN, y: vh - mapH - MAP_MARGIN },                 // bottom-right
+  ];
+}
+
+function getNearestCorner(pos: { x: number; y: number }, mapW: number, mapH: number) {
+  const corners = getCorners(mapW, mapH);
+  return corners.reduce((best, c) =>
+    Math.hypot(pos.x - c.x, pos.y - c.y) < Math.hypot(pos.x - best.x, pos.y - best.y) ? c : best
+  );
+}
 
 export default function MiniMap() {
   const { objects, viewport, setViewport } = useCanvasStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isNavigating, setIsNavigating] = useState(false);
-  const [corner, setCorner] = useState<Corner>('bottom-left');
   const [isMinimized, setIsMinimized] = useState(false);
-  const dragControls = useDragControls();
+
+  // Position state: screen coordinates for Framer Motion
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+
+  // Initialize to bottom-right corner after mount
+  useEffect(() => {
+    const mapW = MINIMAP_SIZE;
+    const mapH = MINIMAP_SIZE + 24;
+    setPos({
+      x: window.innerWidth - mapW - MAP_MARGIN,
+      y: window.innerHeight - mapH - MAP_MARGIN,
+    });
+  }, []);
+
+  // Drag state
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 });
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!pos) return;
+    setDragging(true);
+    dragStart.current = { mouseX: e.clientX, mouseY: e.clientY, posX: pos.x, posY: pos.y };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragging) return;
+    const dx = e.clientX - dragStart.current.mouseX;
+    const dy = e.clientY - dragStart.current.mouseY;
+    setPos({ x: dragStart.current.posX + dx, y: dragStart.current.posY + dy });
+  };
+
+  const handlePointerUp = () => {
+    if (!dragging || !pos) return;
+    setDragging(false);
+    const mapW = isMinimized ? 40 : MINIMAP_SIZE;
+    const mapH = isMinimized ? 40 : MINIMAP_SIZE + 24;
+    setPos(getNearestCorner(pos, mapW, mapH));
+  };
+
+  // Re-snap on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const mapW = isMinimized ? 40 : MINIMAP_SIZE;
+      const mapH = isMinimized ? 40 : MINIMAP_SIZE + 24;
+      setPos(prev => {
+        if (!prev) return prev;
+        return getNearestCorner(prev, mapW, mapH);
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMinimized]);
 
   // 1. Calculate the bounding box of all objects + viewport
   const bounds = useMemo(() => {
@@ -66,7 +138,7 @@ export default function MiniMap() {
     return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
   }, [objects, viewport]);
 
-  // 2. Map coordinates to MiniMap pixels (mmScale ≠ viewport.scale)
+  // 2. Map coordinates to MiniMap pixels
   const mmScale = useMemo(() => {
     const sX = (MINIMAP_SIZE - PADDING * 2) / bounds.width;
     const sY = (MINIMAP_SIZE - PADDING * 2) / bounds.height;
@@ -95,7 +167,6 @@ export default function MiniMap() {
     });
   };
 
-  // Drag the viewport rect indicator to pan the canvas
   const handleVpRectDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     isDraggingVp.current = true;
@@ -132,25 +203,6 @@ export default function MiniMap() {
     setIsNavigating(false);
   };
 
-  const onDragEnd = (_e: any, info: any) => {
-    const thresholdX = window.innerWidth / 2;
-    const thresholdY = window.innerHeight / 2;
-    const mouseX = info.point.x;
-    const mouseY = info.point.y;
-
-    if (mouseX < thresholdX && mouseY > thresholdY) setCorner('bottom-left');
-    else if (mouseX >= thresholdX && mouseY > thresholdY) setCorner('bottom-right');
-    else if (mouseX < thresholdX && mouseY <= thresholdY) setCorner('top-left');
-    else setCorner('top-right');
-  };
-
-  const cornerStyles = {
-    'bottom-left': { bottom: 24, left: 72 }, // Avoid toolbar
-    'bottom-right': { bottom: 24, right: 88 }, // Avoid zoom indicator
-    'top-left': { top: 72, left: 24 }, // Avoid header
-    'top-right': { top: 72, right: 24 },
-  };
-
   const vpRect = {
     left: toMapX(-viewport.x / viewport.scale),
     top:  toMapY(-viewport.y / viewport.scale),
@@ -158,31 +210,29 @@ export default function MiniMap() {
     h: (window.innerHeight / viewport.scale) * mmScale,
   };
 
+  // Don't render until position is initialized
+  if (!pos) return null;
+
   return (
     <motion.div
-      drag
-      dragMomentum={false}
-      dragControls={dragControls}
-      dragListener={false}
-      onDragEnd={onDragEnd}
-      animate={{
-        ...cornerStyles[corner],
-        width: isMinimized ? 40 : MINIMAP_SIZE,
-        height: isMinimized ? 40 : MINIMAP_SIZE + 24,
-      }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed z-[100] bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col"
+      animate={{ x: pos.x, y: pos.y, width: isMinimized ? 40 : MINIMAP_SIZE, height: isMinimized ? 40 : MINIMAP_SIZE + 24 }}
+      transition={dragging ? { type: 'tween', duration: 0 } : { type: 'spring', stiffness: 300, damping: 30 }}
+      style={{ position: 'fixed', top: 0, left: 0 }}
+      className="z-[100] bg-white/80 backdrop-blur-md border border-gray-200 ring-1 ring-indigo-400/50 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
     >
       {/* Mini Header / Drag Bar */}
-      <div 
-        onPointerDown={(e) => dragControls.start(e)}
+      <div
         className="h-6 w-full flex items-center justify-between px-2 bg-gray-50/50 border-b border-gray-100 cursor-move group/header"
       >
         <div className="flex items-center gap-1">
           <GripHorizontal size={12} className="text-gray-400" />
           {!isMinimized && <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Radar</span>}
         </div>
-        <button 
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setIsMinimized(!isMinimized)}
           className="p-0.5 hover:bg-gray-200 rounded-md transition-colors text-gray-400"
         >
@@ -197,9 +247,9 @@ export default function MiniMap() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             ref={containerRef}
-            onPointerDown={handleNavStart}
-            onPointerMove={handleNavMove}
-            onPointerUp={handleNavEnd}
+            onPointerDown={(e) => { e.stopPropagation(); handleNavStart(e); }}
+            onPointerMove={(e) => { e.stopPropagation(); handleNavMove(e); }}
+            onPointerUp={(e) => { e.stopPropagation(); handleNavEnd(); }}
             className="relative flex-1 cursor-crosshair bg-white/30"
           >
             {/* Objects — color-coded by type */}
@@ -242,7 +292,8 @@ export default function MiniMap() {
       </AnimatePresence>
 
       {isMinimized && (
-        <div 
+        <div
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setIsMinimized(false)}
           className="flex-1 flex items-center justify-center cursor-pointer hover:bg-gray-50"
         >
