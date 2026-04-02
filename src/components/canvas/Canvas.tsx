@@ -299,12 +299,17 @@ export default function Canvas() {
         {/* Selection Rect (Canvas Coordinates) */}
         {selectionRect && (
           <div
-            className="absolute border-2 border-indigo-500 bg-indigo-500/10 pointer-events-none z-[1000]"
             style={{
+              position: 'absolute',
               left: selectionRect.x,
               top: selectionRect.y,
               width: selectionRect.w,
               height: selectionRect.h,
+              background: 'rgba(99,102,241,0.08)',
+              border: '1.5px solid rgba(99,102,241,0.7)',
+              borderRadius: '3px',
+              pointerEvents: 'none',
+              zIndex: 9999,
             }}
           />
         )}

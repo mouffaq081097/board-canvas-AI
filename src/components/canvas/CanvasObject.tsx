@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, memo } from 'react';
+import { useRef, memo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { RotateCcw, Lock } from 'lucide-react';
 import { useCanvasStore } from '@/store/canvasStore';
@@ -9,20 +9,22 @@ import StandardNote from './StandardNote';
 import Book from './Book';
 import ShapeOverlay from './ShapeOverlay';
 import AnchorPoint from './AnchorPoint';
+import TableObject from '../canvas/TableObject';
+import ImageObject from '../canvas/ImageObject';
 
 interface Props {
   objectId: string;
 }
 
 const HANDLE_POSITIONS: Record<string, string> = {
-  tl: '-top-1.5 -left-1.5 cursor-nwse-resize',
-  t:  '-top-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize',
-  tr: '-top-1.5 -right-1.5 cursor-nesw-resize',
-  w:  'top-1/2 -left-1.5 -translate-y-1/2 cursor-ew-resize',
-  r:  'top-1/2 -right-1.5 -translate-y-1/2 cursor-ew-resize',
-  sw: '-bottom-1.5 -left-1.5 cursor-nesw-resize',
-  s:  '-bottom-1.5 left-1/2 -translate-x-1/2 cursor-ns-resize',
-  se: '-bottom-1.5 -right-1.5 cursor-nwse-resize',
+  tl: '-top-2 -left-2 cursor-nwse-resize',
+  t:  '-top-2 left-1/2 -translate-x-1/2 cursor-ns-resize',
+  tr: '-top-2 -right-2 cursor-nesw-resize',
+  w:  'top-1/2 -left-2 -translate-y-1/2 cursor-ew-resize',
+  r:  'top-1/2 -right-2 -translate-y-1/2 cursor-ew-resize',
+  sw: '-bottom-2 -left-2 cursor-nesw-resize',
+  s:  '-bottom-2 left-1/2 -translate-x-1/2 cursor-ns-resize',
+  se: '-bottom-2 -right-2 cursor-nwse-resize',
 };
 
 const ResizeHandle = ({ pos, onPointerDown }: { pos: string; onPointerDown: (e: React.PointerEvent, handle: string) => void }) => {
@@ -30,7 +32,7 @@ const ResizeHandle = ({ pos, onPointerDown }: { pos: string; onPointerDown: (e: 
 
   return (
     <div
-      className={`absolute w-3 h-3 bg-white border-2 border-indigo-500 rounded-full z-50 pointer-events-auto hover:bg-indigo-50 transition-colors ${positionClasses}`}
+      className={`absolute w-4 h-4 bg-white border-2 border-indigo-500 rounded-full z-50 pointer-events-auto hover:bg-indigo-50 transition-colors hover:shadow-[0_0_0_3px_rgba(99,102,241,0.3)] ${positionClasses}`}
       onPointerDown={(e) => onPointerDown(e, pos)}
     />
   );
@@ -61,6 +63,8 @@ function CanvasObject({ objectId }: Props) {
     origX: 0,
     origY: 0,
   });
+
+  const [isHovered, setIsHovered] = useState(false);
 
   if (!object) return null;
 
@@ -188,7 +192,7 @@ function CanvasObject({ objectId }: Props) {
     const { x: vX, y: vY, scale } = useCanvasStore.getState().viewport;
     const centerX = (object.x + object.width / 2) * scale + vX;
     const centerY = (object.y + object.height / 2) * scale + vY;
-    
+
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
 
     const onMove = (ev: PointerEvent) => {
@@ -212,10 +216,10 @@ function CanvasObject({ objectId }: Props) {
     <motion.div
       ref={elementRef}
       initial={{ scale: 0.6, opacity: 0 }}
-      animate={{ 
-        scale: 1, 
+      animate={{
+        scale: 1,
         opacity: 1,
-        rotate: object.rotation || 0 
+        rotate: object.rotation || 0
       }}
       transition={{ type: 'spring', stiffness: 400, damping: 22 }}
       className={`absolute canvas-obj group ${isSelected ? 'selection-ring' : ''} ${isPulsing || (connectingFrom?.id === objectId) ? 'animate-pulse-border ring-2 ring-indigo-500 ring-offset-2' : ''} ${isLocked ? 'opacity-60' : ''}`}
@@ -232,6 +236,8 @@ function CanvasObject({ objectId }: Props) {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerEnter={() => setIsHovered(true)}
+      onPointerLeave={() => setIsHovered(false)}
     >
       {isLocked && (
         <div className="absolute top-1 right-1 z-50 pointer-events-none">
@@ -239,10 +245,27 @@ function CanvasObject({ objectId }: Props) {
         </div>
       )}
 
+      {/* Hover bounding box */}
+      {isHovered && !isSelected && (
+        <div
+          className="absolute inset-0 pointer-events-none rounded-sm"
+          style={{
+            border: '2px dashed rgba(99,102,241,0.6)',
+            borderRadius: 'inherit',
+          }}
+        />
+      )}
+
       {object.type === 'sticky' && <StickyNote object={object} />}
       {object.type === 'note' && <StandardNote object={object} />}
       {object.type === 'book' && <Book object={object} />}
       {(object.type === 'shape' || object.type === 'drawing') && <ShapeOverlay object={object} />}
+      {object.type === 'table' && (
+        <TableObject object={object} isSelected={isSelected} onUpdate={(p) => updateObject(object.id, p)} />
+      )}
+      {object.type === 'image' && (
+        <ImageObject object={object} isSelected={isSelected} onUpdate={(p) => updateObject(object.id, p)} />
+      )}
 
       {isSelected && (
         <>
@@ -255,6 +278,57 @@ function CanvasObject({ objectId }: Props) {
 
       {isSelected && object.type !== 'book' && (
         <>
+          {/* W/H size input pill */}
+          <div
+            className="absolute -top-10 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white border-2 border-indigo-400 rounded-full px-3 py-1 shadow-md z-50 pointer-events-auto"
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <span className="text-[10px] font-mono text-gray-400">W</span>
+            <input
+              type="number"
+              value={Math.round(object.width)}
+              className="w-14 text-[11px] font-mono text-gray-700 text-center bg-transparent outline-none border-none"
+              onChange={(e) => {/* handled on blur/enter */}}
+              onBlur={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 40) {
+                  updateObject(object.id, { width: val });
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const val = parseInt((e.target as HTMLInputElement).value);
+                  if (!isNaN(val) && val >= 40) {
+                    updateObject(object.id, { width: val });
+                  }
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+            />
+            <span className="text-[10px] font-mono text-gray-300">×</span>
+            <input
+              type="number"
+              value={Math.round(object.height)}
+              className="w-14 text-[11px] font-mono text-gray-700 text-center bg-transparent outline-none border-none"
+              onBlur={(e) => {
+                const val = parseInt(e.target.value);
+                if (!isNaN(val) && val >= 40) {
+                  updateObject(object.id, { height: val });
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const val = parseInt((e.target as HTMLInputElement).value);
+                  if (!isNaN(val) && val >= 40) {
+                    updateObject(object.id, { height: val });
+                  }
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+            />
+            <span className="text-[10px] font-mono text-gray-400">H</span>
+          </div>
+
           {/* 8-point Resize Handles */}
           <div className="absolute inset-0 pointer-events-none">
             <ResizeHandle pos="tl" onPointerDown={handleResize} />
@@ -268,7 +342,7 @@ function CanvasObject({ objectId }: Props) {
           </div>
 
           {/* Rotation Handle */}
-          <div 
+          <div
             className="absolute -top-12 left-1/2 -translate-x-1/2 w-8 h-8 flex flex-col items-center cursor-grab active:cursor-grabbing group/rotate pointer-events-auto"
             onPointerDown={handleRotate}
           >
