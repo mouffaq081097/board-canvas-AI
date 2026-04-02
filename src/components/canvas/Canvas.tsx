@@ -57,6 +57,8 @@ export default function Canvas() {
     createStandardNote,
     createBook,
     createShape,
+    addTable,
+    addImage,
     selectObjectsInRect,
     objects,
     selectedIds
@@ -210,6 +212,8 @@ export default function Canvas() {
     const rect = container.getBoundingClientRect();
     const pos = screenToCanvas(e.clientX - rect.left, e.clientY - rect.top, vpRef.current);
 
+    const { activeShapeType: shapeType, setActiveTool: setTool } = useCanvasStore.getState();
+
     switch (tool) {
       case 'sticky': createStickyNote(pos.x - 100, pos.y - 100); break;
       case 'note': createStandardNote(pos.x - 140, pos.y - 180); break;
@@ -217,8 +221,19 @@ export default function Canvas() {
       case 'circle': createShape(pos.x - 60, pos.y - 60, 'circle'); break;
       case 'rectangle': createShape(pos.x - 60, pos.y - 60, 'rectangle'); break;
       case 'arrow': createShape(pos.x - 60, pos.y - 30, 'arrow'); break;
+      case 'shape': {
+        const offset = 60;
+        // createShape signature only covers the 3 legacy types, but the store
+        // just passes shapeType into metadata — cast is safe here.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        createShape(pos.x - offset, pos.y - offset, shapeType as any);
+        setTool('pointer');
+        break;
+      }
+      case 'table': addTable(pos.x - 160, pos.y - 120); setTool('pointer'); break;
+      case 'image': addImage(pos.x - 100, pos.y - 100); setTool('pointer'); break;
     }
-  }, [clearSelection, createStickyNote, createStandardNote, createBook, createShape]);
+  }, [clearSelection, createStickyNote, createStandardNote, createBook, createShape, addTable, addImage]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (isSelecting.current) {

@@ -1,14 +1,12 @@
 'use client';
 
+import { useRef, useState } from 'react';
 import {
   MousePointer2,
   Hand,
   StickyNote,
   FileText,
   BookOpen,
-  Circle,
-  Square,
-  ArrowRight,
   Pen,
   Eraser,
   Sparkles,
@@ -19,9 +17,13 @@ import {
   LayoutGrid,
   Diamond,
   EyeOff,
+  Shapes,
+  Table2,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useCanvasStore } from '@/store/canvasStore';
-import { GridMode, ToolType } from '@/types/canvas';
+import { GridMode } from '@/types/canvas';
+import ShapePicker from './ShapePicker';
 
 const GRID_CYCLE: GridMode[] = ['dots', 'graph', 'isometric', 'none'];
 const GRID_META: Record<GridMode, { icon: React.ReactNode; label: string }> = {
@@ -30,19 +32,6 @@ const GRID_META: Record<GridMode, { icon: React.ReactNode; label: string }> = {
   isometric: { icon: <Diamond size={16} />,   label: 'Isometric' },
   none:      { icon: <EyeOff size={16} />,    label: 'No Grid' },
 };
-
-const TOOLS: { id: ToolType; icon: React.ReactNode; label: string }[] = [
-  { id: 'pointer',   icon: <MousePointer2 size={18} />, label: 'Select (V)' },
-  { id: 'hand',      icon: <Hand size={18} />,          label: 'Pan (H)' },
-  { id: 'sticky',    icon: <StickyNote size={18} />,    label: 'Sticky Note (S)' },
-  { id: 'note',      icon: <FileText size={18} />,      label: 'Standard Note (N)' },
-  { id: 'book',      icon: <BookOpen size={18} />,      label: 'Book (B)' },
-  { id: 'circle',    icon: <Circle size={18} />,        label: 'Circle (C)' },
-  { id: 'rectangle', icon: <Square size={18} />,        label: 'Rectangle (R)' },
-  { id: 'arrow',     icon: <ArrowRight size={18} />,    label: 'Arrow (A)' },
-  { id: 'pen',       icon: <Pen size={18} />,           label: 'Draw (D)' },
-  { id: 'eraser',    icon: <Eraser size={18} />,        label: 'Eraser (E)' },
-];
 
 function Divider() {
   return <div className="w-full h-px bg-gray-100 my-0.5" />;
@@ -69,11 +58,15 @@ function ToolBtn({ icon, label, active, onClick }: { icon: React.ReactNode; labe
 export default function Toolbar() {
   const {
     activeTool, setActiveTool,
+    activeShapeType, setActiveShapeType,
     autoTidy,
     viewport, setViewport,
     gridMode, setGridMode,
     layerLockEnabled, setLayerLockEnabled,
   } = useCanvasStore();
+
+  const [showShapePicker, setShowShapePicker] = useState(false);
+  const shapeButtonRef = useRef<HTMLDivElement>(null);
 
   const cycleGrid = () => {
     const idx = GRID_CYCLE.indexOf(gridMode);
@@ -92,6 +85,8 @@ export default function Toolbar() {
     });
   };
 
+  const shapeToolActive = ['circle', 'rectangle', 'arrow', 'triangle', 'diamond', 'star', 'hexagon', 'pentagon', 'shape'].includes(activeTool);
+
   return (
     /* Anchor: left-4, below 52px navbar, above 8px bottom clearance, centered vertically */
     <div className="absolute left-4 z-[100] flex flex-col justify-center" style={{ top: 60, bottom: 8 }}>
@@ -105,9 +100,54 @@ export default function Toolbar() {
         <Divider />
 
         {/* Object creators */}
-        {TOOLS.slice(2, 8).map(t => (
-          <ToolBtn key={t.id} icon={t.icon} label={t.label} active={activeTool === t.id} onClick={() => setActiveTool(t.id)} />
-        ))}
+        <ToolBtn icon={<StickyNote size={18} />} label="Sticky Note (S)" active={activeTool === 'sticky'} onClick={() => setActiveTool('sticky')} />
+        <ToolBtn icon={<FileText size={18} />}   label="Standard Note (N)" active={activeTool === 'note'} onClick={() => setActiveTool('note')} />
+        <ToolBtn icon={<BookOpen size={18} />}   label="Book (B)" active={activeTool === 'book'} onClick={() => setActiveTool('book')} />
+
+        {/* Unified Shapes button */}
+        <div ref={shapeButtonRef} className="relative">
+          <button
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all group ${
+              shapeToolActive
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+            onClick={() => setShowShapePicker(!showShapePicker)}
+            title="Shapes"
+          >
+            <Shapes size={16} />
+            <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-50">
+              Shapes
+            </div>
+          </button>
+          {showShapePicker && (
+            <ShapePicker
+              activeShapeType={activeShapeType}
+              onSelect={(shape) => {
+                setActiveShapeType(shape as Parameters<typeof setActiveShapeType>[0]);
+                setActiveTool('shape');
+                setShowShapePicker(false);
+              }}
+              onClose={() => setShowShapePicker(false)}
+            />
+          )}
+        </div>
+
+        {/* Table tool */}
+        <ToolBtn
+          icon={<Table2 size={16} />}
+          label="Table (T)"
+          active={activeTool === 'table'}
+          onClick={() => setActiveTool('table')}
+        />
+
+        {/* Image tool */}
+        <ToolBtn
+          icon={<ImageIcon size={16} />}
+          label="Image (I)"
+          active={activeTool === 'image'}
+          onClick={() => setActiveTool('image')}
+        />
 
         <Divider />
 
