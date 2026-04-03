@@ -95,6 +95,7 @@ export default function ImageObject({ object, isSelected, onUpdate }: ImageObjec
         className="relative w-full h-full overflow-hidden rounded"
         onPointerDown={(e) => e.stopPropagation()}
       >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={imageUrl}
           alt={imageAlt}

@@ -119,7 +119,7 @@ export default function BookModal({ object, onClose }: Props) {
   }, [liveObject.metadata?.sections, initialized]);
 
   // Derive active section and page from live state
-  const sections = liveObject.metadata?.sections ?? [];
+  const sections = React.useMemo(() => liveObject.metadata?.sections ?? [], [liveObject.metadata?.sections]);
   const activeSection = sections.find((s) => s.id === activeSectionId) ?? sections[0];
   const activePage = activeSection?.pages.find((p) => p.id === activePageId) ?? activeSection?.pages[0];
 

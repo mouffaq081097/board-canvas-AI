@@ -56,10 +56,12 @@ export default function MiniMap() {
   useEffect(() => {
     const mapW = MINIMAP_SIZE;
     const mapH = MINIMAP_SIZE + 24;
-    setPos({
-      x: window.innerWidth - mapW - MAP_MARGIN,
-      y: window.innerHeight - mapH - MAP_MARGIN,
-    });
+    setTimeout(() => {
+      setPos({
+        x: window.innerWidth - mapW - MAP_MARGIN,
+        y: window.innerHeight - mapH - MAP_MARGIN,
+      });
+    }, 0);
   }, []);
 
   // Drag state

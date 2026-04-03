@@ -384,7 +384,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     if (toDuplicate.length === 0) return;
 
     const newObjs = toDuplicate.map((o) => {
-      const { id: _id, ...rest } = JSON.parse(JSON.stringify(o));
+      const { id, ...rest } = JSON.parse(JSON.stringify(o));
       return {
         ...rest,
         x: o.x + 40,

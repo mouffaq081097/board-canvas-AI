@@ -1,6 +1,5 @@
 'use client';
 
-import { useRef } from 'react';
 import { CheckSquare, FileText, Plus, X } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { useCanvasStore } from '@/store/canvasStore';
@@ -12,7 +11,6 @@ interface Props {
 
 export default function StandardNote({ object }: Props) {
   const { updateObject } = useCanvasStore();
-  const newItemRef = useRef<HTMLInputElement>(null);
 
   const isTodo = object.metadata?.todoMode ?? false;
   const items: TodoItem[] = object.metadata?.todoItems ?? [];

@@ -426,7 +426,7 @@ export default function Canvas() {
         )}
 
         {/* Single Context Menu for Selection */}
-        {selectionBox && !isSelecting.current && (
+        {selectionBox && !selectionRect && (
           <div
             className="absolute pointer-events-none z-[1000]"
             style={{

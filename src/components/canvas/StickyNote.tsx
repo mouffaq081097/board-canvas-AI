@@ -8,11 +8,6 @@ interface Props {
   object: CanvasObject;
 }
 
-const PASTEL_COLORS = [
-  '#fef9c3', '#fce7f3', '#dbeafe', '#dcfce7',
-  '#f3e8ff', '#ffedd5', '#ccfbf1', '#fee2e2',
-];
-
 function getLighterShade(hex: string): string {
   const map: Record<string, string> = {
     '#fef9c3': '#fef08a',
