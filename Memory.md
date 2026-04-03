@@ -79,7 +79,40 @@ Full implementation plan is at: `C:\Users\Mouffaq\.claude\plans\mighty-wiggling-
 
 ---
 
+## Planned Enhancement: Freeform Pro Intelligence Layer (2026-04-03)
+## Completed Enhancement: Freeform Pro Intelligence Layer (2026-04-03)
+
+*Note: Development of further Intelligence Layer features has been halted by user request. What is currently implemented (Roadmap Engine & Research Books) is considered the complete feature set.*
+
+### 1. Actionable Roadmap Engine (DONE)
+- **Feature**: Converts `StandardNote` todo items into a visual branching roadmap.
+- **Logic**: AI (`gemini-2.5-flash`) generates semantic graph → client-side deterministic layout algorithm.
+- **Integration**: Batch Zustand commit for nodes and connections with duration labels.
+- **Files**: `src/app/api/ai/roadmap/route.ts`, `src/lib/roadmapLayout.ts`, `src/hooks/useAI.ts`, `src/components/ui/FloatingContextMenu.tsx`
+
+### 2. Contextual Research Books (DONE)
+- **Feature**: 'Magic Research' button in Tiptap toolbar inside `BookModal.tsx`.
+- **Logic**: Generates 3-5 structured pages based on Book title.
+- **Integration**: Converts AI markdown to Tiptap HTML; drops adjacent media objects on canvas.
+- **Files**: `src/app/api/ai/research/route.ts`, `src/hooks/useAI.ts`, `src/components/canvas/BookModal.tsx`
+
+### 3. Canvas Co-Pilot (Predictive Ghosting) (SCRAPPED)
+- **Status**: Scrapped by user request.
+
+### 4. Visual Heatmapping & Clarity Mode (SCRAPPED)
+- **Status**: Scrapped by user request.
+
+### 5. Meeting Mode (Audio-to-Mindmap) (SCRAPPED)
+- **Status**: Scrapped by user request.
+
+---
+
 ## Architecture Decisions
+
+### Intelligence Layer Pattern
+- **AI owns structure, Client owns layout**: AI returns semantic relationships (depth/branch); client computes coordinates.
+- **Batch Commits**: Use `addObjects` (plural) and multiple `addConnection` calls in a single logic block to avoid intermediate renders.
+- **Rough Style**: All AI-generated sticky notes use `rough` library rendering (`style.roughEdges: true`).
 
 ### Object Type Pattern
 Every new canvas object type follows this pattern:

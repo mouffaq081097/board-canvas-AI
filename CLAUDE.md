@@ -102,12 +102,13 @@ ANTHROPIC_API_KEY=
 Run `supabase-setup.sql` in Supabase SQL Editor to create boards table with RLS
 
 ## Intelligence Layer (AI Features)
-Five AI subsystems being built in order — see `docs/superpowers/specs/` for individual design specs.
-1. **Roadmap Engine** — StandardNote todos → branching flowchart (`/api/ai/roadmap`, `useAI.ts`, `FloatingContextMenu`)
-2. **Research Books** — Magic Research button in BookModal Tiptap toolbar → AI-generated pages
-3. **Canvas Co-Pilot** — Ghost sticky note on dangling connection drag
-4. **Heatmapping & Clarity Mode** — AI priority coloring + roadmap-path dimming toggle
-5. **Meeting Mode** — Web Speech API keyword → real-time sticky drop
+Two AI subsystems have been built — see `docs/superpowers/specs/` for individual design specs. Further features were planned but development has been halted by user request; what is currently implemented is considered the complete feature set.
+
+1. **Roadmap Engine (DONE)** — StandardNote todos → branching flowchart (`/api/ai/roadmap`, `useAI.ts`, `FloatingContextMenu`)
+2. **Research Books (DONE)** — Magic Research button in BookModal Tiptap toolbar → AI-generated pages
+~~3. Canvas Co-Pilot (SCRAPPED)~~
+~~4. Heatmapping & Clarity Mode (SCRAPPED)~~
+~~5. Meeting Mode (SCRAPPED)~~
 
 ### Roadmap Engine Specifics
 - AI returns `{ nodes, edges }` — client does layout, never AI
