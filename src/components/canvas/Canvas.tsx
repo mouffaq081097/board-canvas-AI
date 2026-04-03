@@ -420,7 +420,7 @@ export default function Canvas() {
             className="absolute pointer-events-none z-[1000]"
             style={{
               left: selectionBox.x + selectionBox.width / 2,
-              top: selectionBox.y - 12,
+              top: selectionBox.y - 80,
               width: 0,
               height: 0,
             }}

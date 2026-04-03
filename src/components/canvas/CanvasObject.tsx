@@ -81,7 +81,12 @@ function CanvasObject({ objectId }: Props) {
   // Capture-phase handler: fires before any child stopPropagation, enabling drag from anywhere on the object
   const handlePointerDownCapture = (e: React.PointerEvent) => {
     if (activeTool === 'pen' || activeTool === 'eraser') return;
-    if (isLocked && activeTool !== 'arrow') { e.stopPropagation(); return; }
+    if (isLocked && activeTool !== 'arrow') {
+      // Allow selection of locked objects so the user can unlock them via the context menu
+      e.stopPropagation();
+      selectObject(objectId, e.shiftKey);
+      return;
+    }
 
     if (activeTool === 'arrow') {
       e.stopPropagation();

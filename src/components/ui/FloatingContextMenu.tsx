@@ -3,12 +3,9 @@
 import { motion } from 'framer-motion';
 import {
   Trash2,
-  Type,
-  Link as LinkIcon,
   Wand2,
   Group,
   BookMarked,
-  Pencil,
   ScanText,
   ArrowRight,
   Lock,
@@ -57,15 +54,6 @@ export default function FloatingContextMenu({ selectedObjects }: Props) {
     selectedObjects.length === 1 &&
     primaryObject.type === 'note' &&
     (primaryObject.metadata?.todoItems?.length ?? 0) > 0;
-
-  const copyLink = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('x', Math.round(primaryObject.x + primaryObject.width / 2).toString());
-    url.searchParams.set('y', Math.round(primaryObject.y + primaryObject.height / 2).toString());
-    url.searchParams.set('z', '1');
-    
-    navigator.clipboard.writeText(url.toString());
-  };
 
   const handleConnect = () => {
     if (selectedObjects.length !== 2) return;
@@ -168,37 +156,6 @@ export default function FloatingContextMenu({ selectedObjects }: Props) {
         </>
       )}
 
-      {/* Opacity slider */}
-      {selectedObjects.length === 1 && (
-        <div className="flex items-center gap-1.5">
-          <Type size={12} className="text-gray-400" />
-          <input
-            type="range"
-            min={0.2}
-            max={1}
-            step={0.05}
-            value={primaryObject.style.opacity ?? 1}
-            onChange={(e) =>
-              updateObject(primaryObject.id, { style: { ...primaryObject.style, opacity: parseFloat(e.target.value) } })
-            }
-            className="w-16 accent-indigo-500"
-            title="Opacity"
-          />
-          <div className="w-px h-5 bg-gray-200 mx-0.5" />
-        </div>
-      )}
-
-      {/* Copy Link */}
-      {selectedObjects.length === 1 && (
-        <button
-          onClick={copyLink}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 transition"
-          title="Copy Link to Here"
-        >
-          <LinkIcon size={14} />
-        </button>
-      )}
-
       {/* Lock / Unlock (single object only) */}
       {selectedObjects.length === 1 && (
         <button
@@ -219,110 +176,96 @@ export default function FloatingContextMenu({ selectedObjects }: Props) {
         <Trash2 size={14} />
       </button>
 
-      <div className="w-px h-5 bg-gray-200 mx-0.5" />
-
-      {/* AI Actions */}
-      <div className="flex items-center gap-0.5 bg-indigo-50/50 rounded-lg p-0.5">
-        {isRoadmapEligible && (
-          <button
-            onClick={() => runAI('roadmap')}
-            disabled={loading !== null}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
-              loading === 'roadmap'
-                ? 'text-indigo-600'
-                : 'text-indigo-500 hover:bg-white hover:shadow-sm'
-            }`}
-            title="Generate Roadmap"
-          >
-            {loading === 'roadmap' ? (
-              <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <GitFork size={14} />
+      {/* AI Actions — hidden for shapes and books */}
+      {!selectedObjects.some(o => o.type === 'shape' || o.type === 'book') && (
+        <>
+          <div className="w-px h-5 bg-gray-200 mx-0.5" />
+          <div className="flex items-center gap-0.5 bg-indigo-50/50 rounded-lg p-0.5">
+            {isRoadmapEligible && (
+              <button
+                onClick={() => runAI('roadmap')}
+                disabled={loading !== null}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
+                  loading === 'roadmap'
+                    ? 'text-indigo-600'
+                    : 'text-indigo-500 hover:bg-white hover:shadow-sm'
+                }`}
+                title="Generate Roadmap"
+              >
+                {loading === 'roadmap' ? (
+                  <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <GitFork size={14} />
+                )}
+              </button>
             )}
-          </button>
-        )}
 
-        <button
-          onClick={() => runAI('brainstorm')}
-          disabled={loading !== null}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
-            loading === 'brainstorm' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
-          }`}
-          title="Brainstorm"
-        >
-          {loading === 'brainstorm' ? (
-            <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Wand2 size={14} />
-          )}
-        </button>
+            <button
+              onClick={() => runAI('brainstorm')}
+              disabled={loading !== null}
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
+                loading === 'brainstorm' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
+              }`}
+              title="Brainstorm"
+            >
+              {loading === 'brainstorm' ? (
+                <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Wand2 size={14} />
+              )}
+            </button>
 
-        {selectedIds.length >= 2 && (
-          <button
-            onClick={() => runAI('group')}
-            disabled={loading !== null}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
-              loading === 'group' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
-            }`}
-            title="Smart Clustering"
-          >
-            {loading === 'group' ? (
-              <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Group size={14} />
+            {selectedIds.length >= 2 && (
+              <button
+                onClick={() => runAI('group')}
+                disabled={loading !== null}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
+                  loading === 'group' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
+                }`}
+                title="Smart Clustering"
+              >
+                {loading === 'group' ? (
+                  <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Group size={14} />
+                )}
+              </button>
             )}
-          </button>
-        )}
 
-        <button
-          onClick={() => runAI('summarize')}
-          disabled={loading !== null}
-          className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
-            loading === 'summarize' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
-          }`}
-          title="Summarize-to-Book"
-        >
-          {loading === 'summarize' ? (
-            <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <BookMarked size={14} />
-          )}
-        </button>
+            <button
+              onClick={() => runAI('summarize')}
+              disabled={loading !== null}
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
+                loading === 'summarize' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
+              }`}
+              title="Summarize-to-Book"
+            >
+              {loading === 'summarize' ? (
+                <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <BookMarked size={14} />
+              )}
+            </button>
 
-        {selectedObjects.length === 1 && primaryObject.type === 'drawing' && (
-          <button
-            onClick={() => runAI('sketch')}
-            disabled={loading !== null}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
-              loading === 'sketch' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
-            }`}
-            title="Sketch-to-Vector"
-          >
-            {loading === 'sketch' ? (
-              <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <Pencil size={14} />
+            {selectedObjects.length === 1 && primaryObject.type === 'drawing' && (
+              <button
+                onClick={() => runAI('ocr')}
+                disabled={loading !== null}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
+                  loading === 'ocr' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
+                }`}
+                title="Read Handwriting (OCR)"
+              >
+                {loading === 'ocr' ? (
+                  <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <ScanText size={14} />
+                )}
+              </button>
             )}
-          </button>
-        )}
-        
-        {selectedObjects.length === 1 && primaryObject.type === 'drawing' && (
-          <button
-            onClick={() => runAI('ocr')}
-            disabled={loading !== null}
-            className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
-              loading === 'ocr' ? 'text-indigo-600' : 'text-indigo-500 hover:bg-white hover:shadow-sm'
-            }`}
-            title="Read Handwriting (OCR)"
-          >
-            {loading === 'ocr' ? (
-              <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <ScanText size={14} />
-            )}
-          </button>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </motion.div>
   );
 }

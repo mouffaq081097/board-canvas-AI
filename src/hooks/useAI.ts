@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { CanvasObject } from '@/types/canvas';
 
-export type AIAction = 'group' | 'summarize' | 'brainstorm' | 'sketch' | 'ocr' | 'roadmap' | 'research';
+export type AIAction = 'group' | 'summarize' | 'brainstorm' | 'ocr' | 'roadmap' | 'research';
 
 export function useAI() {
   const { selectedIds, objects, addObject, addObjects, addConnection, batchUpdateObjects, updateObject } = useCanvasStore();
@@ -41,7 +41,7 @@ export function useAI() {
       let imageBase64;
       const firstObj = selectedObjects[0];
       
-      if ((action === 'ocr' || action === 'sketch') && firstObj.type === 'image' && firstObj.metadata?.imageUrl?.startsWith('data:image')) {
+      if (action === 'ocr' && firstObj.type === 'image' && firstObj.metadata?.imageUrl?.startsWith('data:image')) {
         imageBase64 = firstObj.metadata.imageUrl;
       }
 
@@ -71,11 +71,6 @@ export function useAI() {
           break;
         case 'summarize':
           if (data.book) addObject(data.book);
-          break;
-        case 'sketch':
-          if (data.object) {
-            updateObject(selectedIds[0], data.object);
-          }
           break;
         case 'ocr':
           if (data.text) {
