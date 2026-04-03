@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { CanvasObject } from '@/types/canvas';
 
-export type AIAction = 'group' | 'summarize' | 'brainstorm' | 'sketch' | 'ocr' | 'roadmap';
+export type AIAction = 'group' | 'summarize' | 'brainstorm' | 'sketch' | 'ocr' | 'roadmap' | 'research';
 
 export function useAI() {
   const { selectedIds, objects, addObject, addObjects, addConnection, batchUpdateObjects, updateObject } = useCanvasStore();
@@ -28,6 +28,15 @@ export function useAI() {
       }
     }
 
+    // Research pre-flight check: ensure selected object is a book
+    if (action === 'research') {
+      if (selectedObjects[0]?.type !== 'book') {
+        setError('Select a book to use Magic Research');
+        setLoading(null);
+        return;
+      }
+    }
+
     try {
       let imageBase64;
       const firstObj = selectedObjects[0];
@@ -38,6 +47,8 @@ export function useAI() {
 
       const body = action === 'roadmap'
         ? JSON.stringify({ todos: selectedObjects[0]?.metadata?.todoItems ?? [] })
+        : action === 'research'
+        ? JSON.stringify({ title: selectedObjects[0]?.content || 'Untitled' })
         : JSON.stringify({ objects: selectedObjects, imageBase64 });
 
       const res = await fetch(`/api/ai/${action}`, {
@@ -128,6 +139,50 @@ export function useAI() {
             });
           });
 
+          break;
+        }
+        case 'research': {
+          if (!data.pages) break;
+          const bookObj = selectedObjects[0];
+          const { v4: uuidv4 } = await import('uuid');
+
+          // 1. Splice new pages into the book's first section
+          const newPages = data.pages.map((p: { title: string; contentHtml: string }) => ({
+            id: uuidv4(),
+            title: p.title,
+            content: p.contentHtml,
+          }));
+
+          const sections = bookObj.metadata?.sections || [];
+          if (sections.length > 0) {
+            const updatedSections = [...sections];
+            updatedSections[0] = {
+              ...updatedSections[0],
+              pages: [...updatedSections[0].pages, ...newPages],
+            };
+            updateObject(bookObj.id, {
+              metadata: { ...bookObj.metadata, sections: updatedSections },
+            });
+          }
+
+          // 2. Drop media items on canvas adjacent to the book
+          if (data.media && data.media.length > 0) {
+            const mediaObjects = data.media.map((m: { query: string; alt: string }, idx: number) => ({
+              type: 'image' as const,
+              x: bookObj.x + bookObj.width + 80,
+              y: bookObj.y + (idx * 240),
+              width: 320,
+              height: 200,
+              content: '',
+              style: {},
+              metadata: {
+                imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(m.query)}?width=640&height=400&nologo=true`,
+                imageAlt: m.alt,
+                isGif: false,
+              },
+            }));
+            addObjects(mediaObjects);
+          }
           break;
         }
       }
