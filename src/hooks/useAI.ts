@@ -18,6 +18,16 @@ export function useAI() {
     setLoading(action);
     setError('');
 
+    // Roadmap pre-flight check: ensure selected note has todo items
+    if (action === 'roadmap') {
+      const todoItems = selectedObjects[0]?.metadata?.todoItems;
+      if (!todoItems?.length) {
+        setError('Select a note with todo items to generate a roadmap');
+        setLoading(null);
+        return;
+      }
+    }
+
     try {
       let imageBase64;
       const firstObj = selectedObjects[0];
@@ -89,10 +99,13 @@ export function useAI() {
             .filter((n: { depth: number }) => n.depth === 0)
             .map((n: { id: string }) => n.id);
 
+          const startId = idMap.get('__START__');
           depth0NodeIds.forEach((nodeId: string) => {
+            const toId = idMap.get(nodeId);
+            if (!startId || !toId) return;
             addConnection({
-              fromId: idMap.get('__START__')!,
-              toId: idMap.get(nodeId)!,
+              fromId: startId,
+              toId,
               fromAnchor: 'right',
               toAnchor: 'left',
               color: '#6366f1',
