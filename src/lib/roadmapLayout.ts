@@ -38,7 +38,14 @@ export interface LayoutResult {
     width: number;
     height: number;
     content: string;
-    style: typeof REGULAR_STYLE;
+    style: {
+      backgroundColor: string;
+      textColor: string;
+      fontFamily: string;
+      fontSize: number;
+      opacity: number;
+      roughEdges: boolean;
+    };
   }[];
   aiNodeIds: string[];
   durationMap: Map<string, string>;
