@@ -173,8 +173,7 @@ export default function Canvas() {
 
   // Track active pointers for multi-touch gestures
   const activePointers = useRef<Map<number, { x: number, y: number }>>(new Map());
-  const initialPinchDistance = useRef<number | null>(null);
-  const initialPinchScale = useRef<number | null>(null);
+  const lastPinchDistance = useRef<number | null>(null);
   const lastPinchMidpoint = useRef<{ x: number, y: number } | null>(null);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -187,8 +186,7 @@ export default function Canvas() {
       setSelectionRect(null);
       const points = Array.from(activePointers.current.values());
       const dist = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
-      initialPinchDistance.current = dist;
-      initialPinchScale.current = vpRef.current.scale;
+      lastPinchDistance.current = dist;
       lastPinchMidpoint.current = {
         x: (points[0].x + points[1].x) / 2,
         y: (points[0].y + points[1].y) / 2,
@@ -276,28 +274,34 @@ export default function Canvas() {
 
       const vp = vpRef.current;
       const container = containerRef.current;
-      
-      if (container && initialPinchDistance.current !== null && initialPinchScale.current !== null && lastPinchMidpoint.current !== null) {
+
+      if (container && lastPinchDistance.current !== null && lastPinchMidpoint.current !== null) {
         const rect = container.getBoundingClientRect();
-        
-        // Calculate new zoom
-        const scaleFactor = dist / initialPinchDistance.current;
-        const newScale = clamp(initialPinchScale.current * scaleFactor, 0.1, 4);
-        
-        // Calculate pan delta from previous midpoint
+
+        // Incremental scale factor: ratio of new distance to last frame's distance
+        // This avoids compounding errors that cause erratic jumps
+        const scaleFactor = dist / lastPinchDistance.current;
+        const newScale = clamp(vp.scale * scaleFactor, 0.1, 4);
+
+        // Pan delta from previous midpoint
         const deltaX = midX - lastPinchMidpoint.current.x;
         const deltaY = midY - lastPinchMidpoint.current.y;
-        
-        // Calculate zoom focus based on current midpoint
-        const mouseX = midX - rect.left;
-        const mouseY = midY - rect.top;
-        const ratio = newScale / vp.scale;
-        
-        // Apply both pan (delta) and zoom (ratio) transformations
-        const newX = mouseX - (mouseX - vp.x) * ratio + deltaX;
-        const newY = mouseY - (mouseY - vp.y) * ratio + deltaY;
+
+        // Zoom around the current midpoint (in container-local coords)
+        const localX = midX - rect.left;
+        const localY = midY - rect.top;
+
+        // Canvas-space point under the midpoint finger before scaling
+        const canvasX = (localX - vp.x) / vp.scale;
+        const canvasY = (localY - vp.y) / vp.scale;
+
+        // After scaling, that same canvas point must still be under the midpoint,
+        // then add the pan delta so the midpoint itself also translates.
+        const newX = localX - canvasX * newScale + deltaX;
+        const newY = localY - canvasY * newScale + deltaY;
 
         applyViewport({ scale: newScale, x: newX, y: newY });
+        lastPinchDistance.current = dist;
         lastPinchMidpoint.current = { x: midX, y: midY };
       }
       return;
@@ -331,8 +335,7 @@ export default function Canvas() {
     activePointers.current.delete(e.pointerId);
     
     if (activePointers.current.size < 2) {
-      initialPinchDistance.current = null;
-      initialPinchScale.current = null;
+      lastPinchDistance.current = null;
       lastPinchMidpoint.current = null;
     }
     
