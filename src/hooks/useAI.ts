@@ -176,7 +176,7 @@ export function useAI() {
               content: '',
               style: {},
               metadata: {
-                imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(m.query)}?width=640&height=400&nologo=true`,
+                imageUrl: `https://pollinations.ai/p/${encodeURIComponent(m.query)}?width=640&height=400&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`,
                 imageAlt: m.alt,
                 isGif: false,
               },
