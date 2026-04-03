@@ -38,13 +38,12 @@ export default function Book({ object }: Props) {
       >
         {/* Book body */}
         <div
-          className="relative w-full h-full rounded-r-sm overflow-hidden flex flex-col"
+          className="relative w-full h-full overflow-hidden flex flex-col"
           style={{
             background: coverImage
               ? `url(${coverImage}) center/cover`
               : coverColor,
             boxShadow: `0 20px 40px rgba(0,0,0,0.25), 0 4px 8px rgba(0,0,0,0.15)`,
-            borderRadius: '2px 4px 4px 2px',
           }}
         >
           {/* Spine */}
@@ -88,7 +87,6 @@ export default function Book({ object }: Props) {
             className="absolute right-0 top-1 bottom-1 w-2"
             style={{
               background: 'repeating-linear-gradient(to bottom, #f5f5f5 0px, #e5e5e5 1px, #f5f5f5 2px)',
-              borderRadius: '0 2px 2px 0',
             }}
           />
         </div>

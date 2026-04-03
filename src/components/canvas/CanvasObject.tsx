@@ -264,7 +264,7 @@ function CanvasObject({ objectId }: Props) {
         width: object.width,
         height: object.height,
         opacity: isLocked ? 0.6 : (object.style.opacity ?? 1),
-        zIndex: isSelected ? 100 : 10,
+        zIndex: isSelected ? 100 : (object.type === 'shape' ? 0 : 10),
         cursor: isLocked ? 'not-allowed' : activeTool === 'pointer' ? 'grab' : 'default',
         willChange: 'transform',
       }}
