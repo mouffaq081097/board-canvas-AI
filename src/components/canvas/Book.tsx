@@ -2,7 +2,6 @@
 
 import { BookOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useCanvasStore } from '@/store/canvasStore';
 import { CanvasObject } from '@/types/canvas';
 
 interface Props {
@@ -10,7 +9,6 @@ interface Props {
 }
 
 export default function Book({ object }: Props) {
-  const { setIsBookModalOpen, setFocusedObjectId } = useCanvasStore();
 
   const spineColor = object.style.spineColor || '#3730a3';
   const coverColor = object.style.backgroundColor || '#4f46e5';
@@ -20,11 +18,6 @@ export default function Book({ object }: Props) {
     <motion.div
       layoutId={`book-${object.id}`}
       className="w-full h-full flex items-center justify-center"
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        setIsBookModalOpen(true);
-        setFocusedObjectId(object.id);
-      }}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
     >

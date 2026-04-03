@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 15 npm run dev)",
+      "Bash(node -e \":*)",
+      "Bash(node -r dotenv/config -e \":*)",
+      "Bash(curl -s http://localhost:3000/api/boards -H \"Cookie: \")",
+      "Bash(wc:*)",
+      "Bash(npm run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(npm install:*)",
+      "Bash(npm list:*)"
+    ]
+  }
+}

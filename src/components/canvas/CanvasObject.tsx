@@ -47,7 +47,6 @@ function CanvasObject({ objectId }: Props) {
   const activeTool = useCanvasStore(s => s.activeTool);
   const connectingFrom = useCanvasStore(s => s.connectingFrom);
   const selectObject = useCanvasStore(s => s.selectObject);
-  const moveObject = useCanvasStore(s => s.moveObject);
   const batchUpdateObjects = useCanvasStore(s => s.batchUpdateObjects);
   const updateObject = useCanvasStore(s => s.updateObject);
   const setConnectingFrom = useCanvasStore(s => s.setConnectingFrom);
@@ -155,10 +154,6 @@ function CanvasObject({ objectId }: Props) {
     }
   };
 
-  // Keep the bubble-phase handler for any cases that need it (currently unused but safe to keep)
-  const handlePointerDown = (e: React.PointerEvent) => {
-    // All logic moved to capture phase above
-  };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!dragState.current.active) return;
@@ -193,15 +188,10 @@ function CanvasObject({ objectId }: Props) {
     const dy = (e.clientY - dragState.current.startClientY) / scale;
 
     const { multiOrigins } = dragState.current;
-    if (multiOrigins.length > 1) {
-      // Batch-commit all selected objects' final positions in a single Zustand update
-      batchUpdateObjects(
-        multiOrigins.map(({ id, x, y }) => ({ id, x: x + dx, y: y + dy }))
-      );
-    } else {
-      // Single Zustand commit on release
-      moveObject(objectId, dragState.current.origX + dx, dragState.current.origY + dy);
-    }
+    // Always use batchUpdateObjects for uniform commit path (multiOrigins always has >= 1 entry)
+    batchUpdateObjects(
+      multiOrigins.map(({ id, x, y }) => ({ id, x: x + dx, y: y + dy }))
+    );
   };
 
   const handleResize = (e: React.PointerEvent, handle: string) => {
@@ -323,7 +313,6 @@ function CanvasObject({ objectId }: Props) {
         willChange: 'transform',
       }}
       onPointerDownCapture={handlePointerDownCapture}
-      onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onDoubleClick={handleDoubleClick}

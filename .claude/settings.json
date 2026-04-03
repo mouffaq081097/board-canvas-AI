@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "C:\\Users\\Mouffaq\\.claude\\skills"
+    ],
+    "allow": [
+      "Bash(tee lint-output.txt)"
+    ]
+  }
+}

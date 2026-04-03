@@ -23,7 +23,7 @@
 
 ---
 
-## Task 1: Vitest Setup
+## Task 1: Vitest Setup (DONE)
 
 No test framework exists in this project. Add minimal Vitest so the layout algorithm can be unit-tested.
 
@@ -31,7 +31,7 @@ No test framework exists in this project. Add minimal Vitest so the layout algor
 - Create: `vitest.config.ts`
 - Modify: `package.json` (add test script + devDependency)
 
-- [ ] **Step 1: Install Vitest**
+- [x] **Step 1: Install Vitest**
 
 ```bash
 npm install --save-dev vitest
@@ -39,7 +39,7 @@ npm install --save-dev vitest
 
 Expected: vitest appears in `devDependencies` in `package.json`.
 
-- [ ] **Step 2: Create vitest config**
+- [x] **Step 2: Create vitest config**
 
 Create `vitest.config.ts`:
 
@@ -59,7 +59,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 3: Add test script to package.json**
+- [x] **Step 3: Add test script to package.json**
 
 In `package.json`, add to `"scripts"`:
 ```json
@@ -67,7 +67,7 @@ In `package.json`, add to `"scripts"`:
 "test:watch": "vitest"
 ```
 
-- [ ] **Step 4: Verify setup works**
+- [x] **Step 4: Verify setup works**
 
 ```bash
 npm test
@@ -75,7 +75,7 @@ npm test
 
 Expected output: `No test files found` (or similar — Vitest runs with no failures).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add vitest.config.ts package.json package-lock.json
@@ -84,7 +84,7 @@ git commit -m "chore: add Vitest for unit testing pure functions"
 
 ---
 
-## Task 2: Layout Algorithm (`roadmapLayout.ts`)
+## Task 2: Layout Algorithm (`roadmapLayout.ts`) (DONE)
 
 A pure function with no imports from the app — just math. Takes AI nodes and the source object's position; returns canvas-ready objects and the AI→canvas ID mapping data.
 
@@ -137,7 +137,7 @@ export interface LayoutResult {
 }
 ```
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `src/lib/__tests__/roadmapLayout.test.ts`:
 
@@ -201,7 +201,7 @@ describe('layoutRoadmap', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests — confirm they fail**
+- [x] **Step 2: Run tests — confirm they fail**
 
 ```bash
 npm test
@@ -209,7 +209,7 @@ npm test
 
 Expected: `Cannot find module '../roadmapLayout'` (or similar import error).
 
-- [ ] **Step 3: Implement `roadmapLayout.ts`**
+- [x] **Step 3: Implement `roadmapLayout.ts`**
 
 Create `src/lib/roadmapLayout.ts`:
 
@@ -309,7 +309,7 @@ export function layoutRoadmap(
 }
 ```
 
-- [ ] **Step 4: Run tests — confirm they pass**
+- [x] **Step 4: Run tests — confirm they pass**
 
 ```bash
 npm test
@@ -317,7 +317,7 @@ npm test
 
 Expected: `7 passed` with no failures.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/roadmapLayout.ts src/lib/__tests__/roadmapLayout.test.ts
@@ -326,12 +326,12 @@ git commit -m "feat: add roadmapLayout pure layout algorithm with tests"
 
 ---
 
-## Task 3: API Route (`/api/ai/roadmap`)
+## Task 3: API Route (`/api/ai/roadmap`) (DONE)
 
 **Files:**
 - Create: `src/app/api/ai/roadmap/route.ts`
 
-- [ ] **Step 1: Create the route**
+- [x] **Step 1: Create the route**
 
 Create `src/app/api/ai/roadmap/route.ts`:
 
@@ -426,7 +426,7 @@ Return ONLY valid JSON with no prose:
 }
 ```
 
-- [ ] **Step 2: Manually verify the route (dev server must be running)**
+- [x] **Step 2: Manually verify the route (dev server must be running)**
 
 Start the dev server in a separate terminal:
 ```bash
@@ -442,7 +442,7 @@ curl -X POST http://localhost:3000/api/ai/roadmap \
 
 Expected: JSON response with `nodes` and `edges` arrays, each node having `id`, `label`, `duration`, `depth`, `branch`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/api/ai/roadmap/route.ts
@@ -451,12 +451,12 @@ git commit -m "feat: add /api/ai/roadmap route (Gemini → semantic graph)"
 
 ---
 
-## Task 4: Hook Integration (`useAI.ts`)
+## Task 4: Hook Integration (`useAI.ts`) (DONE)
 
 **Files:**
 - Modify: `src/hooks/useAI.ts`
 
-- [ ] **Step 1: Add `'roadmap'` to the `AIAction` type and update store destructuring**
+- [x] **Step 1: Add `'roadmap'` to the `AIAction` type and update store destructuring**
 
 Open `src/hooks/useAI.ts`. Make these three changes:
 
@@ -483,7 +483,7 @@ const res = await fetch(`/api/ai/${action}`, {
 });
 ```
 
-- [ ] **Step 2: Add the `roadmap` case to the switch statement**
+- [x] **Step 2: Add the `roadmap` case to the switch statement**
 
 In the `switch (action)` block, add after the `'ocr'` case:
 
@@ -541,7 +541,7 @@ case 'roadmap': {
 }
 ```
 
-- [ ] **Step 3: Run the linter to catch type errors**
+- [x] **Step 3: Run the linter to catch type errors**
 
 ```bash
 npm run lint
@@ -549,7 +549,7 @@ npm run lint
 
 Expected: no errors. If TypeScript complains about the dynamic import, add `// eslint-disable-next-line @typescript-eslint/no-var-requires` above it or switch to a top-level import.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/hooks/useAI.ts
@@ -558,12 +558,12 @@ git commit -m "feat: add roadmap case to useAI hook with layout + batch commit"
 
 ---
 
-## Task 5: FloatingContextMenu Button
+## Task 5: FloatingContextMenu Button (DONE)
 
 **Files:**
 - Modify: `src/components/ui/FloatingContextMenu.tsx`
 
-- [ ] **Step 1: Add the `GitFork` import**
+- [x] **Step 1: Add the `GitFork` import**
 
 In `FloatingContextMenu.tsx`, add `GitFork` to the existing lucide-react import:
 
@@ -574,7 +574,7 @@ import {
 } from 'lucide-react';
 ```
 
-- [ ] **Step 2: Add the eligibility constant**
+- [x] **Step 2: Add the eligibility constant**
 
 After line `const primaryObject = selectedObjects[0];`, add:
 
@@ -585,7 +585,7 @@ const isRoadmapEligible =
   (primaryObject.metadata?.todoItems?.length ?? 0) > 0;
 ```
 
-- [ ] **Step 3: Add the Roadmap button inside the AI actions cluster**
+- [x] **Step 3: Add the Roadmap button inside the AI actions cluster**
 
 Find the AI actions `<div>` (the one with `className="flex items-center gap-0.5 bg-indigo-50/50 rounded-lg p-0.5"`). Add the Roadmap button as the first button inside it, before the existing Brainstorm button:
 
@@ -610,7 +610,7 @@ Find the AI actions `<div>` (the one with `className="flex items-center gap-0.5 
 )}
 ```
 
-- [ ] **Step 4: Manual end-to-end test**
+- [x] **Step 4: Manual end-to-end test**
 
 With the dev server running (`npm run dev`):
 
@@ -623,7 +623,7 @@ With the dev server running (`npm run dev`):
 7. After a few seconds: rough-styled sticky notes appear below/right of the source note, connected by labeled arrows with duration labels (e.g. "2 days")
 8. Confirm the Start node has a light indigo background (`#e0e7ff`)
 
-- [ ] **Step 5: Run linter**
+- [x] **Step 5: Run linter**
 
 ```bash
 npm run lint
@@ -631,7 +631,7 @@ npm run lint
 
 Expected: no errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/components/ui/FloatingContextMenu.tsx
