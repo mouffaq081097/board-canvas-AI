@@ -48,21 +48,33 @@ function CanvasObject({ objectId }: Props) {
   const connectingFrom = useCanvasStore(s => s.connectingFrom);
   const selectObject = useCanvasStore(s => s.selectObject);
   const moveObject = useCanvasStore(s => s.moveObject);
+  const batchUpdateObjects = useCanvasStore(s => s.batchUpdateObjects);
   const updateObject = useCanvasStore(s => s.updateObject);
   const setConnectingFrom = useCanvasStore(s => s.setConnectingFrom);
   const addConnection = useCanvasStore(s => s.addConnection);
+  const setFocusedObjectId = useCanvasStore(s => s.setFocusedObjectId);
+  const setIsBookModalOpen = useCanvasStore(s => s.setIsBookModalOpen);
   const isLocked = useCanvasStore(s => {
     const obj = s.objects.find(o => o.id === objectId);
     return s.layerLockEnabled && (obj?.locked ?? false);
   });
 
   const elementRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef({
+  const dragState = useRef<{
+    active: boolean;
+    startClientX: number;
+    startClientY: number;
+    origX: number;
+    origY: number;
+    // For multi-object drag: all selected objects' starting positions
+    multiOrigins: { id: string; x: number; y: number }[];
+  }>({
     active: false,
     startClientX: 0,
     startClientY: 0,
     origX: 0,
     origY: 0,
+    multiOrigins: [],
   });
 
   const [isHovered, setIsHovered] = useState(false);
@@ -119,12 +131,23 @@ function CanvasObject({ objectId }: Props) {
         // Drag from anywhere on the object — stop propagation so canvas doesn't also handle it
         e.stopPropagation();
         selectObject(objectId, e.shiftKey);
+
+        // Capture starting positions of ALL currently selected objects for multi-move.
+        // We read from the store snapshot after selectObject runs.
+        const { objects: allObjects, selectedIds: currentSelectedIds } = useCanvasStore.getState();
+        // After selectObject, the dragged object is always in selectedIds.
+        // Build origins for every selected object.
+        const multiOrigins = allObjects
+          .filter(o => currentSelectedIds.includes(o.id))
+          .map(o => ({ id: o.id, x: o.x, y: o.y }));
+
         dragState.current = {
           active: true,
           startClientX: e.clientX,
           startClientY: e.clientY,
           origX: object.x,
           origY: object.y,
+          multiOrigins,
         };
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       }
@@ -142,10 +165,23 @@ function CanvasObject({ objectId }: Props) {
     const { scale } = useCanvasStore.getState().viewport;
     const dx = (e.clientX - dragState.current.startClientX) / scale;
     const dy = (e.clientY - dragState.current.startClientY) / scale;
-    // Direct DOM mutation — zero React renders during drag
-    if (elementRef.current) {
-      elementRef.current.style.left = `${dragState.current.origX + dx}px`;
-      elementRef.current.style.top = `${dragState.current.origY + dy}px`;
+
+    const { multiOrigins } = dragState.current;
+    if (multiOrigins.length > 1) {
+      // Multi-object drag: move all selected objects' DOM elements directly
+      multiOrigins.forEach(({ id, x, y }) => {
+        const el = document.querySelector<HTMLElement>(`[data-object-id="${id}"]`);
+        if (el) {
+          el.style.left = `${x + dx}px`;
+          el.style.top = `${y + dy}px`;
+        }
+      });
+    } else {
+      // Single-object drag — direct DOM mutation on this element only
+      if (elementRef.current) {
+        elementRef.current.style.left = `${dragState.current.origX + dx}px`;
+        elementRef.current.style.top = `${dragState.current.origY + dy}px`;
+      }
     }
   };
 
@@ -155,8 +191,17 @@ function CanvasObject({ objectId }: Props) {
     const { scale } = useCanvasStore.getState().viewport;
     const dx = (e.clientX - dragState.current.startClientX) / scale;
     const dy = (e.clientY - dragState.current.startClientY) / scale;
-    // Single Zustand commit on release
-    moveObject(objectId, dragState.current.origX + dx, dragState.current.origY + dy);
+
+    const { multiOrigins } = dragState.current;
+    if (multiOrigins.length > 1) {
+      // Batch-commit all selected objects' final positions in a single Zustand update
+      batchUpdateObjects(
+        multiOrigins.map(({ id, x, y }) => ({ id, x: x + dx, y: y + dy }))
+      );
+    } else {
+      // Single Zustand commit on release
+      moveObject(objectId, dragState.current.origX + dx, dragState.current.origY + dy);
+    }
   };
 
   const handleResize = (e: React.PointerEvent, handle: string) => {
@@ -247,9 +292,18 @@ function CanvasObject({ objectId }: Props) {
     window.addEventListener('pointerup', onUp);
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    if (object.type === 'book') {
+      e.stopPropagation();
+      setFocusedObjectId(object.id);
+      setIsBookModalOpen(true);
+    }
+  };
+
   return (
     <motion.div
       ref={elementRef}
+      data-object-id={objectId}
       initial={{ scale: 0.6, opacity: 0 }}
       animate={{
         scale: 1,
@@ -272,6 +326,7 @@ function CanvasObject({ objectId }: Props) {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onDoubleClick={handleDoubleClick}
       onPointerEnter={() => setIsHovered(true)}
       onPointerLeave={() => setIsHovered(false)}
     >
