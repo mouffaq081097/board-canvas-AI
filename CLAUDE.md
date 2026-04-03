@@ -19,7 +19,7 @@ src/
     (auth)/         # Auth route group
     (dashboard)/    # Dashboard route group
     api/
-      ai/           # AI endpoints: brainstorm, group, ocr, sketch, summarize
+      ai/           # AI endpoints: brainstorm, group, ocr, sketch, summarize, roadmap
       boards/       # Board CRUD
       canvas/       # Canvas save/load
   components/
@@ -101,5 +101,20 @@ ANTHROPIC_API_KEY=
 ## Database Setup
 Run `supabase-setup.sql` in Supabase SQL Editor to create boards table with RLS
 
+## Intelligence Layer (AI Features)
+Five AI subsystems being built in order — see `docs/superpowers/specs/` for individual design specs.
+1. **Roadmap Engine** — StandardNote todos → branching flowchart (`/api/ai/roadmap`, `useAI.ts`, `FloatingContextMenu`)
+2. **Research Books** — Magic Research button in BookModal Tiptap toolbar → AI-generated pages
+3. **Canvas Co-Pilot** — Ghost sticky note on dangling connection drag
+4. **Heatmapping & Clarity Mode** — AI priority coloring + roadmap-path dimming toggle
+5. **Meeting Mode** — Web Speech API keyword → real-time sticky drop
+
+### Roadmap Engine Specifics
+- AI returns `{ nodes, edges }` — client does layout, never AI
+- Layout: `x = source.x + depth*(200+80)`, `y = source.y + h + 60 + branch*(120+40)`
+- `useAI.ts` `AIAction` union includes `'roadmap'` — sends `{ todos }` not `{ objects }`
+- Rough-styled stickies (`roughEdges: true`) for all AI-generated nodes
+
 ## See Also
 - `Memory.md` — full enhancement plan and architectural decisions
+- `docs/superpowers/specs/` — per-feature design specs
