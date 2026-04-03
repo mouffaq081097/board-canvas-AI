@@ -11,6 +11,13 @@ import {
   Viewport,
 } from '@/types/canvas';
 
+const HISTORY_LIMIT = 50;
+
+interface HistorySnapshot {
+  objects: CanvasObject[];
+  connections: Connection[];
+}
+
 interface CanvasStore {
   // State
   objects: CanvasObject[];
@@ -26,6 +33,14 @@ interface CanvasStore {
   isBookModalOpen: boolean;
   gridMode: GridMode;
   layerLockEnabled: boolean;
+
+  // History (undo/redo)
+  _past: HistorySnapshot[];
+  _future: HistorySnapshot[];
+
+  // Undo / Redo
+  undo: () => void;
+  redo: () => void;
 
   // Object actions
   addObject: (obj: Omit<CanvasObject, 'id'>) => string;
@@ -103,28 +118,66 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   isBookModalOpen: false,
   gridMode: 'dots',
   layerLockEnabled: false,
+  _past: [],
+  _future: [],
+
+  undo: () => {
+    const { _past, objects, connections } = get();
+    if (_past.length === 0) return;
+    const previous = _past[_past.length - 1];
+    set((state) => ({
+      _past: state._past.slice(0, -1),
+      _future: [{ objects, connections }, ...state._future].slice(0, HISTORY_LIMIT),
+      objects: previous.objects,
+      connections: previous.connections,
+    }));
+  },
+
+  redo: () => {
+    const { _future, objects, connections } = get();
+    if (_future.length === 0) return;
+    const next = _future[0];
+    set((state) => ({
+      _past: [...state._past, { objects, connections }].slice(-HISTORY_LIMIT),
+      _future: state._future.slice(1),
+      objects: next.objects,
+      connections: next.connections,
+    }));
+  },
 
   addObject: (obj) => {
     const id = uuidv4();
-    set((state) => ({ objects: [...state.objects, { ...obj, id }] }));
+    set((state) => ({
+      _past: [...state._past, { objects: state.objects, connections: state.connections }].slice(-HISTORY_LIMIT),
+      _future: [],
+      objects: [...state.objects, { ...obj, id }],
+    }));
     return id;
   },
 
   addObjects: (objs) => {
     const ids = objs.map(() => uuidv4());
     const newObjects = objs.map((obj, i) => ({ ...obj, id: ids[i] }));
-    set((state) => ({ objects: [...state.objects, ...newObjects] }));
+    set((state) => ({
+      _past: [...state._past, { objects: state.objects, connections: state.connections }].slice(-HISTORY_LIMIT),
+      _future: [],
+      objects: [...state.objects, ...newObjects],
+    }));
     return ids;
   },
 
   updateObject: (id, updates) => {
     set((state) => ({
+      _past: [...state._past, { objects: state.objects, connections: state.connections }].slice(-HISTORY_LIMIT),
+      _future: [],
       objects: state.objects.map((o) => (o.id === id ? { ...o, ...updates } : o)),
     }));
   },
 
   deleteObjects: (ids) => {
     set((state) => ({
+      _past: [...state._past, { objects: state.objects, connections: state.connections }].slice(-HISTORY_LIMIT),
+      _future: [],
       objects: state.objects.filter((o) => !ids.includes(o.id)),
       connections: state.connections.filter(
         (c) => !ids.includes(c.fromId) && !ids.includes(c.toId)
@@ -143,6 +196,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     set((state) => {
       const map = new Map(updates.map((u) => [u.id, u]));
       return {
+        _past: [...state._past, { objects: state.objects, connections: state.connections }].slice(-HISTORY_LIMIT),
+        _future: [],
         objects: state.objects.map((o) => {
           const upd = map.get(o.id);
           return upd ? { ...o, ...upd } : o;
@@ -153,7 +208,11 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
 
   addConnection: (conn) => {
     const id = uuidv4();
-    set((state) => ({ connections: [...state.connections, { ...conn, id }] }));
+    set((state) => ({
+      _past: [...state._past, { objects: state.objects, connections: state.connections }].slice(-HISTORY_LIMIT),
+      _future: [],
+      connections: [...state.connections, { ...conn, id }],
+    }));
   },
 
   updateConnection: (id, updates) => {
@@ -163,7 +222,11 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   },
 
   deleteConnection: (id) => {
-    set((state) => ({ connections: state.connections.filter((c) => c.id !== id) }));
+    set((state) => ({
+      _past: [...state._past, { objects: state.objects, connections: state.connections }].slice(-HISTORY_LIMIT),
+      _future: [],
+      connections: state.connections.filter((c) => c.id !== id),
+    }));
   },
 
   selectObject: (id, multi = false) => {

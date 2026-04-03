@@ -21,6 +21,8 @@ import {
   Shapes,
   Table2,
   Image as ImageIcon,
+  Undo2,
+  Redo2,
 } from 'lucide-react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { GridMode } from '@/types/canvas';
@@ -64,6 +66,8 @@ export default function Toolbar() {
     viewport, setViewport,
     gridMode, setGridMode,
     layerLockEnabled, setLayerLockEnabled,
+    undo, redo,
+    _past, _future,
   } = useCanvasStore();
 
   const [showShapePicker, setShowShapePicker] = useState(false);
@@ -173,6 +177,28 @@ export default function Toolbar() {
 
         {/* Auto-tidy */}
         <ToolBtn icon={<Sparkles size={18} />} label="Auto-Tidy" onClick={autoTidy} />
+
+        {/* Undo / Redo */}
+        <button
+          onClick={undo}
+          disabled={_past.length === 0}
+          className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all group disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:hover:bg-transparent disabled:hover:text-gray-500"
+        >
+          <Undo2 size={16} />
+          <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-50">
+            Undo (⌘Z)
+          </div>
+        </button>
+        <button
+          onClick={redo}
+          disabled={_future.length === 0}
+          className="relative w-9 h-9 rounded-xl flex items-center justify-center transition-all group disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:hover:bg-transparent disabled:hover:text-gray-500"
+        >
+          <Redo2 size={16} />
+          <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-50">
+            Redo (⌘⇧Z)
+          </div>
+        </button>
 
         <Divider />
 

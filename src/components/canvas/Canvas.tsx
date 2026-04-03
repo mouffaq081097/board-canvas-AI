@@ -2,6 +2,7 @@
 
 import { useRef, useCallback, useEffect, memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { useCanvasStore } from '@/store/canvasStore';
 import { clamp, screenToCanvas, getSelectionBoundingBox } from '@/lib/canvasUtils';
 import CanvasObject from './CanvasObject';
@@ -61,8 +62,15 @@ export default function Canvas() {
     addImage,
     selectObjectsInRect,
     objects,
-    selectedIds
+    selectedIds,
+    undo,
+    redo,
   } = useCanvasStore();
+
+  // Undo / Redo keyboard shortcuts
+  useHotkeys('mod+z', (e) => { e.preventDefault(); undo(); }, { enableOnFormTags: false });
+  useHotkeys('mod+shift+z', (e) => { e.preventDefault(); redo(); }, { enableOnFormTags: false });
+  useHotkeys('mod+y', (e) => { e.preventDefault(); redo(); }, { enableOnFormTags: false });
 
   const selectedObjects = objects.filter(o => selectedIds.includes(o.id));
   const selectionBox = getSelectionBoundingBox(selectedObjects);
