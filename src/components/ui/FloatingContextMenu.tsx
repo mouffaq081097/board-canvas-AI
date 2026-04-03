@@ -13,6 +13,7 @@ import {
   ArrowRight,
   Lock,
   LockOpen,
+  GitFork,
 } from 'lucide-react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { CanvasObject } from '@/types/canvas';
@@ -51,6 +52,11 @@ export default function FloatingContextMenu({ selectedObjects }: Props) {
   if (selectedObjects.length === 0) return null;
 
   const primaryObject = selectedObjects[0];
+
+  const isRoadmapEligible =
+    selectedObjects.length === 1 &&
+    primaryObject.type === 'note' &&
+    (primaryObject.metadata?.todoItems?.length ?? 0) > 0;
 
   const copyLink = () => {
     const url = new URL(window.location.href);
@@ -217,6 +223,25 @@ export default function FloatingContextMenu({ selectedObjects }: Props) {
 
       {/* AI Actions */}
       <div className="flex items-center gap-0.5 bg-indigo-50/50 rounded-lg p-0.5">
+        {isRoadmapEligible && (
+          <button
+            onClick={() => runAI('roadmap')}
+            disabled={loading !== null}
+            className={`w-7 h-7 rounded-lg flex items-center justify-center transition ${
+              loading === 'roadmap'
+                ? 'text-indigo-600'
+                : 'text-indigo-500 hover:bg-white hover:shadow-sm'
+            }`}
+            title="Generate Roadmap"
+          >
+            {loading === 'roadmap' ? (
+              <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <GitFork size={14} />
+            )}
+          </button>
+        )}
+
         <button
           onClick={() => runAI('brainstorm')}
           disabled={loading !== null}
