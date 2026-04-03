@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Cloud,
   Book as BookIcon,
+  Wand2,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -17,6 +18,7 @@ import TaskItem from '@tiptap/extension-task-item';
 import { useCanvasStore } from '@/store/canvasStore';
 import { CanvasObject, BookSection } from '@/types/canvas';
 import { v4 as uuidv4 } from 'uuid';
+import { useAI } from '@/hooks/useAI';
 
 interface Props {
   object: CanvasObject;
@@ -43,6 +45,7 @@ export default function BookModal({ object, onClose }: Props) {
     setFocusedObjectId,
   } = useCanvasStore();
 
+  const { runAI, loading } = useAI();
   const [title, setTitle] = useState(object.content);
   const [isSaving, setIsSaving] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState<string>('');
@@ -408,6 +411,24 @@ export default function BookModal({ object, onClose }: Props) {
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Formatting Toolbar */}
             <div className="flex items-center gap-1 px-6 py-2 border-b border-gray-100 bg-white flex-shrink-0 flex-wrap">
+              <button
+                onClick={() => runAI('research')}
+                disabled={loading !== null}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded text-sm font-medium transition-all border ${
+                  loading === 'research'
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-600 cursor-wait'
+                    : 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-transparent hover:shadow-md hover:from-indigo-600 hover:to-purple-600'
+                }`}
+                title="Generate research pages & media"
+              >
+                {loading === 'research' ? (
+                  <div className="w-3.5 h-3.5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Wand2 size={14} className="text-white" />
+                )}
+                {loading === 'research' ? 'Researching...' : 'Magic Research'}
+              </button>
+              <div className="w-px h-5 bg-gray-200 mx-2" />
               {editor && (
                 <>
                   <ToolbarButton
