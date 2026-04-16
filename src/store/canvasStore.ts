@@ -9,6 +9,7 @@ import {
   AnchorSide,
   ToolType,
   Viewport,
+  ShapeType,
 } from '@/types/canvas';
 
 const HISTORY_LIMIT = 50;
@@ -24,12 +25,14 @@ interface CanvasStore {
   connections: Connection[];
   selectedIds: string[];
   activeTool: ToolType;
-  activeShapeType: 'circle' | 'rectangle' | 'arrow' | 'triangle' | 'diamond' | 'star' | 'hexagon' | 'pentagon';
+  activeShapeType: ShapeType;
   viewport: Viewport;
   isDrawing: boolean;
   connectingFrom: { id: string; anchor: AnchorSide } | null;
+  mousePos: { x: number; y: number } | null;
   pulsingId: string | null;
   focusedObjectId: string | null;
+  editingObjectId: string | null;
   isBookModalOpen: boolean;
   gridMode: GridMode;
   layerLockEnabled: boolean;
@@ -63,19 +66,20 @@ interface CanvasStore {
 
   // Tools & viewport
   setActiveTool: (tool: ToolType) => void;
-  setActiveShapeType: (shape: CanvasStore['activeShapeType']) => void;
+  setActiveShapeType: (shape: ShapeType) => void;
   setViewport: (viewport: Partial<Viewport>) => void;
   setIsDrawing: (drawing: boolean) => void;
   setConnectingFrom: (data: { id: string; anchor: AnchorSide } | null) => void;
   setPulsingId: (id: string | null) => void;
   setFocusedObjectId: (id: string | null) => void;
+  setEditingObjectId: (id: string | null) => void;
   setIsBookModalOpen: (isOpen: boolean) => void;
   setGridMode: (mode: GridMode) => void;
   setLayerLockEnabled: (val: boolean) => void;
   toggleObjectLock: (id: string) => void;
 
   // Layout & Organization
-  autoTidy: () => void;
+  autoTidy: (ids?: string[]) => void;
   duplicateObjects: (ids: string[]) => void;
   bringToFront: (ids: string[]) => void;
   sendToBack: (ids: string[]) => void;
@@ -88,7 +92,7 @@ interface CanvasStore {
   createStickyNote: (x: number, y: number) => string;
   createStandardNote: (x: number, y: number) => string;
   createBook: (x: number, y: number) => string;
-  createShape: (x: number, y: number, shapeType: 'circle' | 'rectangle' | 'arrow' | 'triangle' | 'diamond' | 'star' | 'hexagon' | 'pentagon') => string;
+  createShape: (x: number, y: number, shapeType: ShapeType) => string;
   addTable: (x: number, y: number) => string;
   addImage: (x: number, y: number) => string;
 
@@ -114,7 +118,9 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   isDrawing: false,
   connectingFrom: null,
   pulsingId: null,
+  mousePos: null,
   focusedObjectId: null,
+  editingObjectId: null,
   isBookModalOpen: false,
   gridMode: 'dots',
   layerLockEnabled: false,
@@ -277,6 +283,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
 
   setFocusedObjectId: (id) => set({ focusedObjectId: id }),
 
+  setEditingObjectId: (id) => set({ editingObjectId: id }),
+
   setIsBookModalOpen: (isOpen) => set({ isBookModalOpen: isOpen }),
 
   setGridMode: (mode) => set({ gridMode: mode }),
@@ -288,9 +296,13 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       objects: state.objects.map((o) => (o.id === id ? { ...o, locked: !o.locked } : o)),
     })),
 
-  autoTidy: () => {
+  autoTidy: (ids) => {
     const { objects, connections, batchUpdateObjects } = get();
     if (objects.length <= 1) return;
+
+    // Determine which objects we are actually moving
+    const targets = ids ? objects.filter(o => ids.includes(o.id)) : objects;
+    if (targets.length === 0) return;
 
     // Simulation constants
     const ITERATIONS = 100;
@@ -300,7 +312,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     const CENTER_GRAVITY = 0.02;
     const DAMPING = 0.8;
 
-    // Use center points for physics
+    // We use ALL objects for repulsion, but only update the targets
     const nodes = objects.map((obj) => ({
       id: obj.id,
       x: obj.x + obj.width / 2,
@@ -309,15 +321,17 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       vy: 0,
       width: obj.width,
       height: obj.height,
+      isTarget: ids ? ids.includes(obj.id) : true
     }));
 
+    const targetNodes = nodes.filter(n => n.isTarget);
     const startCenter = {
-      x: nodes.reduce((sum, n) => sum + n.x, 0) / nodes.length,
-      y: nodes.reduce((sum, n) => sum + n.y, 0) / nodes.length,
+      x: targetNodes.reduce((sum, n) => sum + n.x, 0) / targetNodes.length,
+      y: targetNodes.reduce((sum, n) => sum + n.y, 0) / targetNodes.length,
     };
 
     for (let i = 0; i < ITERATIONS; i++) {
-      // 1. Repulsion
+      // 1. Repulsion (between all nodes)
       for (let j = 0; j < nodes.length; j++) {
         for (let k = j + 1; k < nodes.length; k++) {
           const n1 = nodes[j];
@@ -331,18 +345,17 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
 
-          n1.vx += fx;
-          n1.vy += fy;
-          n2.vx -= fx;
-          n2.vy -= fy;
+          if (n1.isTarget) { n1.vx += fx; n1.vy += fy; }
+          if (n2.isTarget) { n2.vx -= fx; n2.vy -= fy; }
         }
       }
 
-      // 2. Attraction
+      // 2. Attraction (only if BOTH ends of a connection are in the target list, 
+      //    or if at least one is a target to pull them together)
       connections.forEach((conn) => {
         const n1 = nodes.find((n) => n.id === conn.fromId);
         const n2 = nodes.find((n) => n.id === conn.toId);
-        if (n1 && n2) {
+        if (n1 && n2 && (n1.isTarget || n2.isTarget)) {
           const dx = n1.x - n2.x;
           const dy = n1.y - n2.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -351,15 +364,14 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
           const fx = (dx / dist) * force;
           const fy = (dy / dist) * force;
 
-          n1.vx -= fx;
-          n1.vy -= fy;
-          n2.vx += fx;
-          n2.vy += fy;
+          if (n1.isTarget) { n1.vx -= fx; n1.vy -= fy; }
+          if (n2.isTarget) { n2.vx += fx; n2.vy += fy; }
         }
       });
 
-      // 3. Update
+      // 3. Update position (only for targets)
       nodes.forEach((n) => {
+        if (!n.isTarget) return;
         n.vx += (startCenter.x - n.x) * CENTER_GRAVITY;
         n.vy += (startCenter.y - n.y) * CENTER_GRAVITY;
         n.x += n.vx;
@@ -370,11 +382,13 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     }
 
     batchUpdateObjects(
-      nodes.map((n) => ({
-        id: n.id,
-        x: Math.round(n.x - n.width / 2),
-        y: Math.round(n.y - n.height / 2),
-      }))
+      nodes
+        .filter(n => n.isTarget)
+        .map((n) => ({
+          id: n.id,
+          x: Math.round(n.x - n.width / 2),
+          y: Math.round(n.y - n.height / 2),
+        }))
     );
   },
 
@@ -430,8 +444,8 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       content: '',
       style: {
         backgroundColor: '#fef9c3',
-        textColor: '#1a1a1a',
-        fontFamily: 'caveat',
+        textColor: '#1c1008',
+        fontFamily: 'sans',
         fontSize: 18,
         opacity: 1,
         roughEdges: false,
@@ -444,14 +458,14 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       type: 'note' as ObjectType,
       x,
       y,
-      width: 280,
-      height: 360,
+      width: 200,
+      height: 100,
       content: '',
       style: {
-        backgroundColor: '#ffffff',
-        textColor: '#1a1a1a',
-        fontFamily: 'lora',
-        fontSize: 14,
+        backgroundColor: 'transparent',
+        textColor: '#1f2937',
+        fontFamily: 'sans',
+        fontSize: 16,
         opacity: 1,
       },
     });

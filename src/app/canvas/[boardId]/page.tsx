@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CheckCheck, Search } from 'lucide-react';
+import { ArrowLeft, CheckCheck, Search, MoreHorizontal } from 'lucide-react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { debounce } from '@/lib/debounce';
 import Canvas from '@/components/canvas/Canvas';
@@ -12,6 +12,8 @@ import CommandSearch from '@/components/ui/CommandSearch';
 import AIPanel from '@/components/ui/AIPanel';
 import BookModal from '@/components/canvas/BookModal';
 import MiniMap from '@/components/ui/MiniMap';
+import MobileFAB from '@/components/ui/MobileFAB';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 
@@ -106,10 +108,12 @@ export default function CanvasPage({ params }: { params: Promise<{ boardId: stri
     return () => window.removeEventListener('keydown', handler);
   }, [setActiveTool]);
 
+  const isMobile = useIsMobile();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const focusedObject = objects.find(o => o.id === focusedObjectId);
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-gray-50">
+    <div className="fixed inset-0 overflow-hidden bg-gray-50 canvas-safe-wrapper">
       {/* Header bar */}
       <div className="absolute top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-2 bg-white/90 backdrop-blur-md border-b border-gray-100 h-[52px]">
 
@@ -137,8 +141,8 @@ export default function CanvasPage({ params }: { params: Promise<{ boardId: stri
           />
         </div>
 
-        {/* Center: search trigger */}
-        <div className="flex-1 flex justify-center px-4">
+        {/* Center: search trigger (desktop only) */}
+        <div className="hidden sm:flex flex-1 justify-center px-4">
           <button
             onClick={() => {
               window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
@@ -151,8 +155,8 @@ export default function CanvasPage({ params }: { params: Promise<{ boardId: stri
           </button>
         </div>
 
-        {/* Right: save status + object count */}
-        <div className="flex items-center gap-2 flex-1 justify-end">
+        {/* Right: save status + object count (desktop) */}
+        <div className="hidden sm:flex items-center gap-2 flex-1 justify-end">
           {saveStatus === 'saving' && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -160,7 +164,7 @@ export default function CanvasPage({ params }: { params: Promise<{ boardId: stri
               className="flex items-center gap-1.5 text-xs text-gray-400"
             >
               <span className="w-3 h-3 border-2 border-gray-300 border-t-indigo-400 rounded-full animate-spin" />
-              <span className="hidden sm:inline">Saving…</span>
+              <span>Saving…</span>
             </motion.div>
           )}
           {saveStatus === 'saved' && (
@@ -171,12 +175,46 @@ export default function CanvasPage({ params }: { params: Promise<{ boardId: stri
               className="flex items-center gap-1.5 text-xs text-green-600"
             >
               <CheckCheck size={13} />
-              <span className="hidden sm:inline">Saved</span>
+              <span>Saved</span>
             </motion.div>
           )}
           <div className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-2 py-1 rounded-lg">
             {objects.length} obj
           </div>
+        </div>
+
+        {/* Right: mobile overflow menu */}
+        <div className="sm:hidden flex items-center gap-2 relative">
+          {saveStatus === 'saving' && (
+            <span className="w-3 h-3 border-2 border-gray-300 border-t-indigo-400 rounded-full animate-spin" />
+          )}
+          {saveStatus === 'saved' && <CheckCheck size={14} className="text-green-600" />}
+          <button
+            onClick={() => setMobileMenuOpen(v => !v)}
+            className="p-2 rounded-xl hover:bg-gray-100 transition text-gray-500"
+          >
+            <MoreHorizontal size={18} />
+          </button>
+          {mobileMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-[90]" onClick={() => setMobileMenuOpen(false)} />
+              <div className="absolute top-10 right-0 z-[100] bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[160px]">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }));
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  <Search size={14} />
+                  Search canvas
+                </button>
+                <div className="text-xs text-gray-400 px-3 py-2 border-t border-gray-100">
+                  {objects.length} objects
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -202,6 +240,9 @@ export default function CanvasPage({ params }: { params: Promise<{ boardId: stri
 
       {/* AI Panel */}
       {loaded && <AIPanel />}
+
+      {/* Mobile FAB */}
+      {loaded && isMobile && <MobileFAB />}
 
       {/* Book Modal */}
       <AnimatePresence>

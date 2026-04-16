@@ -52,12 +52,20 @@ const AI_BUTTONS: AIButton[] = [
 ];
 
 export default function AIPanel() {
-  const { selectedIds } = useCanvasStore();
+  const { selectedIds, objects } = useCanvasStore();
   const { runAI, loading, error } = useAI();
 
+  const selectedObjects = objects.filter((o) => selectedIds.includes(o.id));
+  
+  // Hide panel if ANY selected object is a book or a shape (including legacy types)
+  const hasBookOrShape = selectedObjects.some(
+    (o) => o.type === 'book' || ['shape', 'circle', 'rectangle', 'arrow', 'triangle', 'diamond', 'star', 'hexagon', 'pentagon'].includes(o.type)
+  );
+
   return (
+    <div className="hidden sm:block">
     <AnimatePresence>
-      {selectedIds.length > 0 && (
+      {selectedIds.length > 0 && !hasBookOrShape && (
         <motion.div
           key="ai-panel"
           initial={{ opacity: 0, y: 40, scale: 0.95 }}
@@ -135,5 +143,6 @@ export default function AIPanel() {
         </motion.div>
       )}
     </AnimatePresence>
+    </div>
   );
 }

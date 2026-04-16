@@ -11,6 +11,7 @@ import {
   Lock,
   LockOpen,
   GitFork,
+  Sparkles,
 } from 'lucide-react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { CanvasObject } from '@/types/canvas';
@@ -33,9 +34,10 @@ const BOOK_COLORS = [
 ];
 
 const FONTS = [
-  { value: 'caveat', label: 'Handwriting' },
+  { value: 'sans', label: 'Sans' },
   { value: 'serif', label: 'Serif' },
-  { value: 'sans-serif', label: 'Sans' },
+  { value: 'handwriting', label: 'Handwriting' },
+  { value: 'mono', label: 'Mono' },
 ];
 
 interface Props {
@@ -43,7 +45,7 @@ interface Props {
 }
 
 export default function FloatingContextMenu({ selectedObjects }: Props) {
-  const { updateObject, deleteObjects, selectedIds, addConnection, toggleObjectLock } = useCanvasStore();
+  const { updateObject, deleteObjects, selectedIds, addConnection, toggleObjectLock, autoTidy } = useCanvasStore();
   const { runAI, loading } = useAI();
 
   if (selectedObjects.length === 0) return null;
@@ -83,6 +85,22 @@ export default function FloatingContextMenu({ selectedObjects }: Props) {
         className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-gray-100 rotate-45"
         style={{ zIndex: -1 }}
       />
+
+      {/* Multi-selection suggestions */}
+      {selectedObjects.length > 1 && (
+        <>
+          <button
+            onClick={() => autoTidy(selectedIds)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition shadow-sm border border-indigo-100"
+            title="Auto-organize selection"
+          >
+            <Sparkles size={14} />
+            <span>Tidy Up</span>
+          </button>
+          
+          <div className="w-px h-5 bg-gray-200 mx-1" />
+        </>
+      )}
 
       {/* Group Actions: Connect */}
       {selectedObjects.length === 2 && (
@@ -177,7 +195,7 @@ export default function FloatingContextMenu({ selectedObjects }: Props) {
       </button>
 
       {/* AI Actions — hidden for shapes and books */}
-      {!selectedObjects.some(o => o.type === 'shape' || o.type === 'book') && (
+      {!selectedObjects.some(o => o.type === 'book' || ['shape', 'circle', 'rectangle', 'arrow', 'triangle', 'diamond', 'star', 'hexagon', 'pentagon'].includes(o.type)) && (
         <>
           <div className="w-px h-5 bg-gray-200 mx-0.5" />
           <div className="flex items-center gap-0.5 bg-indigo-50/50 rounded-lg p-0.5">

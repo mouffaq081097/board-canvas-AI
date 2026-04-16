@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GripHorizontal, Maximize2, Minimize2 } from 'lucide-react';
+import { GripHorizontal, Maximize2, Minimize2, Map as MapIcon } from 'lucide-react';
 import { CanvasObject } from '@/types/canvas';
 
+// Colors matched to our new Freeform palette
 const TYPE_COLORS: Record<string, string> = {
-  sticky: '#f59e0b',   // amber
-  note: '#64748b',     // slate
-  book: '#8b5cf6',     // purple
-  shape: '#0ea5e9',    // sky blue
+  sticky: '#FFF2AD',   // matching pastel yellow
+  note: '#ffffff',     // white ruled paper
+  book: '#4f46e5',     // premium indigo
+  shape: '#6366f1',    // indigo
   drawing: '#f43f5e',  // rose
   table: '#10b981',    // emerald
   image: '#f97316',    // orange
@@ -20,10 +21,11 @@ function getMinimapColor(obj: CanvasObject): string {
   return TYPE_COLORS[obj.type] ?? '#6366f1';
 }
 
-const MINIMAP_SIZE = 180; // px
-const PADDING = 20;
-const NAVBAR_HEIGHT = 56;
-const MAP_MARGIN = 16;
+const MAP_WIDTH = 200; // px
+const MAP_HEIGHT = 120; // px
+const PADDING = 12;
+const NAVBAR_HEIGHT = 60;
+const MAP_MARGIN = 20;
 
 function getCorners(mapW: number, mapH: number) {
   const vw = window.innerWidth;
@@ -54,8 +56,8 @@ export default function MiniMap() {
 
   // Initialize to bottom-right corner after mount
   useEffect(() => {
-    const mapW = MINIMAP_SIZE;
-    const mapH = MINIMAP_SIZE + 24;
+    const mapW = MAP_WIDTH;
+    const mapH = MAP_HEIGHT + 24;
     setTimeout(() => {
       setPos({
         x: window.innerWidth - mapW - MAP_MARGIN,
@@ -85,16 +87,16 @@ export default function MiniMap() {
   const handlePointerUp = () => {
     if (!dragging || !pos) return;
     setDragging(false);
-    const mapW = isMinimized ? 40 : MINIMAP_SIZE;
-    const mapH = isMinimized ? 40 : MINIMAP_SIZE + 24;
+    const mapW = isMinimized ? 44 : MAP_WIDTH;
+    const mapH = isMinimized ? 44 : MAP_HEIGHT + 24;
     setPos(getNearestCorner(pos, mapW, mapH));
   };
 
   // Re-snap on window resize
   useEffect(() => {
     const handleResize = () => {
-      const mapW = isMinimized ? 40 : MINIMAP_SIZE;
-      const mapH = isMinimized ? 40 : MINIMAP_SIZE + 24;
+      const mapW = isMinimized ? 44 : MAP_WIDTH;
+      const mapH = isMinimized ? 44 : MAP_HEIGHT + 24;
       setPos(prev => {
         if (!prev) return prev;
         return getNearestCorner(prev, mapW, mapH);
@@ -107,7 +109,7 @@ export default function MiniMap() {
   // 1. Calculate the bounding box of all objects + viewport
   const bounds = useMemo(() => {
     if (objects.length === 0) {
-      return { minX: -1000, minY: -1000, maxX: 1000, maxY: 1000, width: 2000, height: 2000 };
+      return { minX: -2000, minY: -2000, maxX: 2000, maxY: 2000, width: 4000, height: 4000 };
     }
 
     let minX = Infinity;
@@ -132,25 +134,26 @@ export default function MiniMap() {
     maxX = Math.max(maxX, vpX2);
     maxY = Math.max(maxY, vpY2);
 
-    minX -= 500;
-    minY -= 500;
-    maxX += 500;
-    maxY += 500;
+    // Padding for the minimap view
+    minX -= 800;
+    minY -= 800;
+    maxX += 800;
+    maxY += 800;
 
     return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
   }, [objects, viewport]);
 
   // 2. Map coordinates to MiniMap pixels
   const mmScale = useMemo(() => {
-    const sX = (MINIMAP_SIZE - PADDING * 2) / bounds.width;
-    const sY = (MINIMAP_SIZE - PADDING * 2) / bounds.height;
+    const sX = (MAP_WIDTH - PADDING * 2) / bounds.width;
+    const sY = (MAP_HEIGHT - PADDING * 2) / bounds.height;
     return Math.min(sX, sY);
   }, [bounds]);
 
   const toMapX = (x: number) => (x - bounds.minX) * mmScale + PADDING;
   const toMapY = (y: number) => (y - bounds.minY) * mmScale + PADDING;
 
-  // vpRect drag state (separate from minimap-background nav)
+  // vpRect drag state
   const isDraggingVp = useRef(false);
   const vpDragStart = useRef({ px: 0, py: 0, vpX: 0, vpY: 0 });
 
@@ -212,66 +215,84 @@ export default function MiniMap() {
     h: (window.innerHeight / viewport.scale) * mmScale,
   };
 
-  // Don't render until position is initialized
   if (!pos) return null;
 
   return (
+    <div className="hidden sm:block">
     <motion.div
-      animate={{ x: pos.x, y: pos.y, width: isMinimized ? 40 : MINIMAP_SIZE, height: isMinimized ? 40 : MINIMAP_SIZE + 24 }}
-      transition={dragging ? { type: 'tween', duration: 0 } : { type: 'spring', stiffness: 300, damping: 30 }}
+      animate={{ 
+        x: pos.x, 
+        y: pos.y, 
+        width: isMinimized ? 44 : MAP_WIDTH, 
+        height: isMinimized ? 44 : MAP_HEIGHT + 32,
+        borderRadius: isMinimized ? '22px' : '20px'
+      }}
+      transition={dragging ? { type: 'tween', duration: 0 } : { type: 'spring', stiffness: 400, damping: 35 }}
       style={{ position: 'fixed', top: 0, left: 0 }}
-      className="z-[100] bg-white/80 backdrop-blur-md border border-gray-200 ring-1 ring-indigo-400/50 rounded-2xl shadow-2xl overflow-hidden select-none flex flex-col"
+      className="z-[100] bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_20px_50px_rgba(0,0,0,0.1)] select-none flex flex-col overflow-hidden"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
     >
-      {/* Mini Header / Drag Bar */}
+      {/* Premium Header */}
       <div
-        className="h-6 w-full flex items-center justify-between px-2 bg-gray-50/50 border-b border-gray-100 cursor-move group/header"
+        className="h-8 w-full flex items-center justify-between px-3 bg-white/30 cursor-move border-b border-black/5"
       >
-        <div className="flex items-center gap-1">
-          <GripHorizontal size={12} className="text-gray-400" />
-          {!isMinimized && <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Radar</span>}
+        <div className="flex items-center gap-2">
+          <MapIcon size={12} className="text-indigo-600/70" />
+          {!isMinimized && (
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em]">Overview</span>
+          )}
         </div>
-        <button
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => setIsMinimized(!isMinimized)}
-          className="p-0.5 hover:bg-gray-200 rounded-md transition-colors text-gray-400"
-        >
-          {isMinimized ? <Maximize2 size={10} /> : <Minimize2 size={10} />}
-        </button>
+        {!isMinimized && (
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => setIsMinimized(true)}
+            className="p-1 hover:bg-black/5 rounded-full transition-colors text-gray-400"
+          >
+            <Minimize2 size={12} />
+          </button>
+        )}
       </div>
 
       <AnimatePresence>
         {!isMinimized && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             ref={containerRef}
             onPointerDown={(e) => { e.stopPropagation(); handleNavStart(e); }}
             onPointerMove={(e) => { e.stopPropagation(); handleNavMove(e); }}
             onPointerUp={(e) => { e.stopPropagation(); handleNavEnd(); }}
-            className="relative flex-1 cursor-crosshair bg-white/30"
+            className="relative flex-1 cursor-crosshair overflow-hidden"
           >
-            {/* Objects — color-coded by type */}
+            {/* Subtle Mini-Grid Background */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
+              backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
+              backgroundSize: '12px 12px'
+            }} />
+
+            {/* Objects — Detailed Miniatures */}
             {objects.map((obj) => (
               <div
                 key={obj.id}
-                className="absolute rounded-sm"
+                className="absolute"
                 style={{
                   left: toMapX(obj.x),
                   top: toMapY(obj.y),
-                  width: Math.max(2, obj.width * mmScale),
-                  height: Math.max(2, obj.height * mmScale),
+                  width: Math.max(3, obj.width * mmScale),
+                  height: Math.max(3, obj.height * mmScale),
                   backgroundColor: getMinimapColor(obj),
-                  opacity: 0.85,
-                  border: '1px solid rgba(0,0,0,0.15)',
+                  borderRadius: obj.type === 'sticky' ? 1 : 2,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                  border: '0.5px solid rgba(0,0,0,0.05)',
+                  zIndex: obj.type === 'shape' ? 1 : 2,
                 }}
               />
             ))}
 
-            {/* Viewport Finder — draggable to pan */}
+            {/* Viewport Lens — The Draggable Focus Area */}
             <div
               onPointerDown={handleVpRectDown}
               onPointerMove={handleVpRectMove}
@@ -282,26 +303,36 @@ export default function MiniMap() {
                 top: vpRect.top,
                 width: vpRect.w,
                 height: vpRect.h,
-                border: '2px solid #6366f1',
-                backgroundColor: 'rgba(99,102,241,0.08)',
-                borderRadius: 2,
+                border: '1.5px solid #6366f1',
+                backgroundColor: 'rgba(99,102,241,0.05)',
+                borderRadius: 4,
                 cursor: 'grab',
                 pointerEvents: 'auto',
+                boxShadow: '0 0 0 1000px rgba(0,0,0,0.03)', // Soft dimming of outside area
               }}
-            />
+            >
+              {/* Corner Accents for the lens */}
+              <div className="absolute -top-1 -left-1 w-1.5 h-1.5 border-t-2 border-l-2 border-indigo-500 rounded-tl-sm" />
+              <div className="absolute -bottom-1 -right-1 w-1.5 h-1.5 border-b-2 border-r-2 border-indigo-500 rounded-br-sm" />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Minimized Pulse State */}
       {isMinimized && (
         <div
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => setIsMinimized(false)}
-          className="flex-1 flex items-center justify-center cursor-pointer hover:bg-gray-50"
+          className="flex-1 flex items-center justify-center cursor-pointer hover:bg-black/5 transition-colors"
         >
-          <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" />
+          <div className="relative">
+            <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />
+            <div className="absolute inset-0 w-2.5 h-2.5 bg-indigo-500 rounded-full animate-ping opacity-40" />
+          </div>
         </div>
       )}
     </motion.div>
+    </div>
   );
 }

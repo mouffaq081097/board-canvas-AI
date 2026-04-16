@@ -1,13 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   MousePointer2,
   Hand,
   StickyNote,
   FileText,
   BookOpen,
+  Waypoints,
   Pen,
   Eraser,
   Sparkles,
@@ -24,6 +25,7 @@ import {
   Undo2,
   Redo2,
 } from 'lucide-react';
+
 import { useCanvasStore } from '@/store/canvasStore';
 import { GridMode } from '@/types/canvas';
 import ShapePicker from './ShapePicker';
@@ -72,7 +74,11 @@ export default function Toolbar() {
 
   const [showShapePicker, setShowShapePicker] = useState(false);
   const [shapePickerPos, setShapePickerPos] = useState({ top: 0, left: 0 });
+  const [showObjectPicker, setShowObjectPicker] = useState(false);
+  const [objectPickerPos, setObjectPickerPos] = useState({ top: 0, left: 0 });
+  
   const shapeButtonRef = useRef<HTMLDivElement>(null);
+  const objectButtonRef = useRef<HTMLDivElement>(null);
 
   const cycleGrid = () => {
     const idx = GRID_CYCLE.indexOf(gridMode);
@@ -92,10 +98,11 @@ export default function Toolbar() {
   };
 
   const shapeToolActive = ['circle', 'rectangle', 'arrow', 'triangle', 'diamond', 'star', 'hexagon', 'pentagon', 'shape'].includes(activeTool);
+  const objectToolActive = ['sticky', 'note', 'book'].includes(activeTool);
 
   return (
     /* Anchor: left-4, below 52px navbar, above 8px bottom clearance, centered vertically */
-    <div className="absolute left-4 z-[100] flex flex-col justify-center" style={{ top: 60, bottom: 8 }}>
+    <div className="absolute left-4 z-[100] hidden sm:flex flex-col justify-center" style={{ top: 60, bottom: 8 }}>
       {/* ShapePicker rendered here — fixed position so it escapes overflow-y-auto clipping */}
       <AnimatePresence>
         {showShapePicker && (
@@ -112,19 +119,89 @@ export default function Toolbar() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Object Picker */}
+      <AnimatePresence>
+        {showObjectPicker && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, x: -10 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.9, x: -10 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            style={{ position: 'fixed', top: objectPickerPos.top, left: objectPickerPos.left, zIndex: 200, transformOrigin: 'left center' }}
+            className="bg-white rounded-2xl shadow-xl border border-gray-100 p-3 flex flex-col gap-1"
+          >
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={() => { setActiveTool('sticky'); setShowObjectPicker(false); }}
+                className={`flex flex-col items-center justify-center gap-1.5 rounded-xl w-14 h-16 transition-colors ${
+                  activeTool === 'sticky' ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+                title="Sticky Note"
+              >
+                <StickyNote size={20} className={activeTool === 'sticky' ? 'text-white' : 'text-yellow-500'} />
+                <span className="text-[9px] font-medium leading-none">Sticky</span>
+              </button>
+              <button
+                onClick={() => { setActiveTool('note'); setShowObjectPicker(false); }}
+                className={`flex flex-col items-center justify-center gap-1.5 rounded-xl w-14 h-16 transition-colors ${
+                  activeTool === 'note' ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+                title="Text Note"
+              >
+                <FileText size={20} className={activeTool === 'note' ? 'text-white' : 'text-gray-500'} />
+                <span className="text-[9px] font-medium leading-none">Note</span>
+              </button>
+              <button
+                onClick={() => { setActiveTool('book'); setShowObjectPicker(false); }}
+                className={`flex flex-col items-center justify-center gap-1.5 rounded-xl w-14 h-16 transition-colors ${
+                  activeTool === 'book' ? 'bg-indigo-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+                title="Collection"
+              >
+                <BookOpen size={20} className={activeTool === 'book' ? 'text-white' : 'text-indigo-500'} />
+                <span className="text-[9px] font-medium leading-none">Book</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col gap-0.5 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200 p-1.5 overflow-y-auto"
         style={{ maxHeight: '100%', scrollbarWidth: 'none' }}
       >
-        {/* Selection + pan */}
+        {/* Selection + pan + connector */}
         <ToolBtn icon={<MousePointer2 size={18} />} label="Select (V)" active={activeTool === 'pointer'} onClick={() => setActiveTool('pointer')} />
         <ToolBtn icon={<Hand size={18} />}          label="Pan (H)"    active={activeTool === 'hand'}    onClick={() => setActiveTool('hand')} />
+        <ToolBtn icon={<Waypoints size={18} />}  label="Connector (C)" active={activeTool === 'connector'} onClick={() => setActiveTool('connector')} />
 
         <Divider />
 
-        {/* Object creators */}
-        <ToolBtn icon={<StickyNote size={18} />} label="Sticky Note (S)" active={activeTool === 'sticky'} onClick={() => setActiveTool('sticky')} />
-        <ToolBtn icon={<FileText size={18} />}   label="Standard Note (N)" active={activeTool === 'note'} onClick={() => setActiveTool('note')} />
-        <ToolBtn icon={<BookOpen size={18} />}   label="Book (B)" active={activeTool === 'book'} onClick={() => setActiveTool('book')} />
+        {/* Object Gallery Button */}
+        <div ref={objectButtonRef} className="relative">
+          <button
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all group ${
+              objectToolActive
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!showObjectPicker && objectButtonRef.current) {
+                const rect = objectButtonRef.current.getBoundingClientRect();
+                setObjectPickerPos({ top: rect.top, left: rect.right + 8 });
+              }
+              setShowObjectPicker(v => !v);
+              setShowShapePicker(false);
+            }}
+            title="Add Objects"
+          >
+            <StickyNote size={18} />
+            <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-50">
+              Objects
+            </div>
+          </button>
+        </div>
 
         {/* Unified Shapes button */}
         <div ref={shapeButtonRef} className="relative">
@@ -134,17 +211,18 @@ export default function Toolbar() {
                 ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
                 : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
             }`}
-            onPointerDown={(e) => {
+            onClick={(e) => {
               e.stopPropagation();
               if (!showShapePicker && shapeButtonRef.current) {
                 const rect = shapeButtonRef.current.getBoundingClientRect();
                 setShapePickerPos({ top: rect.top, left: rect.right + 8 });
               }
               setShowShapePicker(v => !v);
+              setShowObjectPicker(false);
             }}
             title="Shapes"
           >
-            <Shapes size={18} />
+            <Shapes size={20} strokeWidth={1.5} />
             <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-50">
               Shapes
             </div>
@@ -174,9 +252,6 @@ export default function Toolbar() {
         <ToolBtn icon={<Eraser size={18} />} label="Eraser (E)" active={activeTool === 'eraser'} onClick={() => setActiveTool('eraser')} />
 
         <Divider />
-
-        {/* Auto-tidy */}
-        <ToolBtn icon={<Sparkles size={18} />} label="Auto-Tidy" onClick={autoTidy} />
 
         {/* Undo / Redo */}
         <button
@@ -213,18 +288,21 @@ export default function Toolbar() {
           </div>
         </button>
 
-        {/* Layer lock */}
+        {/* Lock All */}
         <button
-          onClick={() => setLayerLockEnabled(!layerLockEnabled)}
-          className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all group ${
-            layerLockEnabled
-              ? 'bg-amber-500 text-white shadow-md shadow-amber-200'
-              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
-          }`}
+          onClick={() => {
+            const { objects, batchUpdateObjects } = useCanvasStore.getState();
+            // If all are locked, unlock them. Otherwise, lock everything.
+            const allLocked = objects.length > 0 && objects.every((o) => o.locked);
+            batchUpdateObjects(
+              objects.map((o) => ({ id: o.id, locked: !allLocked }))
+            );
+          }}
+          className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all group hover:bg-gray-100 hover:text-gray-900 text-gray-500`}
         >
           <Lock size={16} />
           <div className="absolute left-full ml-3 px-2 py-1 bg-gray-900 text-white text-[10px] font-bold rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-50">
-            Layer Lock {layerLockEnabled ? 'ON' : 'OFF'}
+            Lock/Unlock All
           </div>
         </button>
 

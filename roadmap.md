@@ -6,7 +6,7 @@
 
 ---
 
-## Task 1: Context Menu Cleanup (Quick Wins)
+## Task 1: Context Menu Cleanup (Quick Wins) (DONE)
 **Files:** `src/components/ui/FloatingContextMenu.tsx`, `src/hooks/useAI.ts`, `src/components/canvas/Canvas.tsx`
 
 1. **Remove Sketch-to-Vector:**
@@ -23,7 +23,7 @@
 
 ---
 
-## Task 2: Object Rendering & Styling (Z-Index & Books)
+## Task 2: Object Rendering & Styling (Z-Index & Books) (DONE)
 **Files:** `src/components/canvas/CanvasObject.tsx`, `src/components/canvas/Book.tsx`
 
 1. **Shapes Under Objects (Z-Index):**
@@ -35,7 +35,7 @@
 
 ---
 
-## Task 3: Canvas Interactions (Multi-Move & Double Click)
+## Task 3: Canvas Interactions (Multi-Move & Double Click) (DONE)
 **Files:** `src/store/canvasStore.ts`, `src/components/canvas/CanvasObject.tsx`
 
 1. **Multi-Object Dragging:**
@@ -49,7 +49,7 @@
 
 ---
 
-## Task 4: iPad Zooming & Gestures
+## Task 4: iPad Zooming & Gestures (DONE)
 **Files:** `src/components/canvas/Canvas.tsx`
 
 1. **Improve Touch Zooming:**
@@ -58,7 +58,7 @@
 
 ---
 
-## Task 5: Undo/Redo System
+## Task 5: Undo/Redo System (DONE)
 **Files:** `src/store/canvasStore.ts`, `src/components/ui/Toolbar.tsx`
 
 1. **Implement Undo History:**

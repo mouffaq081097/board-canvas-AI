@@ -94,7 +94,7 @@ export default function ShapePicker({ activeShapeType, onSelect, onClose }: Shap
             return (
               <button
                 key={shape.type}
-                onPointerDown={(e) => {
+                onClick={(e) => {
                   e.stopPropagation();
                   onSelect(shape.type);
                   onClose();

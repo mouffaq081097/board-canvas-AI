@@ -3,12 +3,14 @@
 import { useRef, useCallback, useEffect, memo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { Waypoints } from 'lucide-react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { clamp, screenToCanvas, getSelectionBoundingBox } from '@/lib/canvasUtils';
 import CanvasObject from './CanvasObject';
 import ConnectionLayer from './ConnectionLayer';
 import DrawingCanvas from './DrawingCanvas';
 import FloatingContextMenu from '../ui/FloatingContextMenu';
+import MultiSelectBox from './MultiSelectBox';
 
 // Separate component so it doesn't re-render when viewport/objects change
 const ObjectLayer = memo(function ObjectLayer() {
@@ -227,7 +229,13 @@ export default function Canvas() {
       return;
     }
 
-    if (tool === 'pointer') {
+    if (tool === 'pointer' || tool === 'connector') {
+      if (tool === 'connector') {
+        if (useCanvasStore.getState().connectingFrom) {
+          useCanvasStore.getState().setConnectingFrom(null);
+        }
+        return;
+      }
       clearSelection();
       isSelecting.current = true;
       const container = containerRef.current;
@@ -269,6 +277,19 @@ export default function Canvas() {
   }, [clearSelection, createStickyNote, createStandardNote, createBook, createShape, addTable, addImage, activeTool]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (useCanvasStore.getState().connectingFrom) {
+      const world = canvasWorldRef.current;
+      if (world) {
+        const rect = world.getBoundingClientRect();
+        useCanvasStore.setState({
+          mousePos: {
+            x: (e.clientX - rect.left) / vpRef.current.scale,
+            y: (e.clientY - rect.top) / vpRef.current.scale,
+          }
+        });
+      }
+    }
+
     if (activePointers.current.has(e.pointerId)) {
       activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     }
@@ -406,6 +427,7 @@ export default function Canvas() {
       >
         <ConnectionLayer />
         <ObjectLayer />
+        <MultiSelectBox />
 
         {/* Selection Rect (Canvas Coordinates) */}
         {selectionRect && (
@@ -446,10 +468,20 @@ export default function Canvas() {
         <DrawingCanvas viewportRef={vpRef} />
       )}
 
-      {/* Zoom indicator — updated via ref */}
-      <div className="absolute bottom-5 right-5 bg-white/80 backdrop-blur-sm border border-gray-200 text-xs text-gray-500 px-2.5 py-1 rounded-full shadow-sm z-50">
-        <span ref={zoomIndicatorRef}>100%</span>
-      </div>
+      {/* Connector Mode Indicator */}
+      <AnimatePresence>
+        {activeTool === 'connector' && (
+          <motion.div
+            initial={{ y: -50, x: '-50%', opacity: 0 }}
+            animate={{ y: 20, x: '-50%', opacity: 1 }}
+            exit={{ y: -50, x: '-50%', opacity: 0 }}
+            className="absolute top-0 left-1/2 z-[200] bg-indigo-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm font-bold pointer-events-none"
+          >
+            <Waypoints size={16} />
+            <span>Connector Mode Active</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

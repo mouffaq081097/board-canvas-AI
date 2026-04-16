@@ -5,7 +5,7 @@ export type ToolType =
   | 'shape'   // unified shape tool (replaces circle/rectangle/arrow)
   | 'circle' | 'rectangle' | 'arrow'  // keep for backwards compat
   | 'pen' | 'eraser'
-  | 'table' | 'image';
+  | 'table' | 'image' | 'connector';
 
 export type AnchorSide = 'top' | 'right' | 'bottom' | 'left';
 
@@ -43,14 +43,17 @@ export interface TodoItem {
   done: boolean;
 }
 
+export type ShapeType = 'circle' | 'rectangle' | 'arrow' | 'triangle' | 'diamond' | 'star' | 'hexagon' | 'pentagon';
+
 export interface ObjectMetadata {
   pages?: BookPage[];
   sections?: BookSection[];  // OneNote-style sections, replaces pages[]
-  shapeType?: 'circle' | 'rectangle' | 'arrow' | 'triangle' | 'diamond' | 'star' | 'hexagon' | 'pentagon';
+  shapeType?: ShapeType;
   pathData?: string;
   ocrText?: string;
   todoMode?: boolean;
   todoItems?: TodoItem[];
+  noteTitle?: string;
   imageUrl?: string;
   imageAlt?: string;
   isGif?: boolean;

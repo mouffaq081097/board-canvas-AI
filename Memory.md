@@ -107,9 +107,35 @@ Full implementation plan is at: `C:\Users\Mouffaq\.claude\plans\mighty-wiggling-
 
 ---
 
-## Architecture Decisions
+## Completed Enhancement: Bug Fixes & UX Polish (2026-04-03)
 
-### Intelligence Layer Pattern
+### 1. Context Menu Cleanup
+- Removed Sketch-to-Vector, opacity slider, and Copy Link tools.
+- Hid the AI toolbox cluster for `shape` and `book` objects.
+- Fixed the tooltip distance to prevent obstructing selected objects.
+- Fixed lock button UX: Locked objects can now be selected to access the unlock button.
+
+### 2. Object Rendering & Styling
+- **Z-Index**: Shapes now correctly render behind notes and books (`z-index: 0`) when unselected.
+- **Books**: Removed all rounded corners making Books strictly rectangular.
+
+### 3. Canvas Interactions
+- **Multi-Move**: Users can now drag multiple selected objects simultaneously. Delta is applied directly to the DOM during `pointermove`, and a single `batchUpdateObjects` commit is made to Zustand on `pointerup`.
+- **Double Click**: Double-clicking a book now correctly opens the BookModal (`onDoubleClick` moved exclusively to `CanvasObject.tsx`).
+
+### 4. iPad Zooming
+- Refactored `Canvas.tsx` pinch-to-zoom logic. It now calculates the scale factor incrementally per-frame rather than from the gesture start, preventing compounding math errors and erratic jumping on tablets.
+
+### 5. Undo/Redo System
+- Added a 50-step history stack (`_past`, `_future`) to `canvasStore.ts`.
+- Hooked into destructive actions: `addObject`, `addObjects`, `updateObject`, `batchUpdateObjects`, `deleteObjects`, `addConnection`, `deleteConnection`.
+- Added `react-hotkeys-hook` for `mod+z`, `mod+shift+z`, and `mod+y` in `Canvas.tsx`.
+- Added visual `Undo2` and `Redo2` buttons in `Toolbar.tsx`.
+
+### 6. Linter Optimization
+- Fixed extensive `react-hooks/refs` errors in `Canvas.tsx` and exhaustive-deps warnings, reducing terminal lint noise to zero.
+
+## Architecture Decisions
 - **AI owns structure, Client owns layout**: AI returns semantic relationships (depth/branch); client computes coordinates.
 - **Batch Commits**: Use `addObjects` (plural) and multiple `addConnection` calls in a single logic block to avoid intermediate renders.
 - **Rough Style**: All AI-generated sticky notes use `rough` library rendering (`style.roughEdges: true`).

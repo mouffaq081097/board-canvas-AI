@@ -70,14 +70,15 @@ Current `ObjectType` values: `'sticky' | 'note' | 'book' | 'shape' | 'drawing' |
 - Route protection uses `proxy.ts`, not `middleware.ts` (Next.js 16 breaking change)
 - All pages using Supabase require `export const dynamic = 'force-dynamic'`
 - `rough` library used for hand-drawn sketch rendering on canvas
-- **Never update Zustand during pointermove** — use direct DOM mutation, commit to store on pointerup
+- **Never update Zustand during pointermove** — use direct DOM mutation, commit to store on pointerup via `batchUpdateObjects`
+- **Undo/Redo System**: `canvasStore.ts` tracks a 50-step history stack (`_past`, `_future`). Destructive actions must push their state to `_past`. Viewport changes and selections are *not* tracked in history.
 - Shape metadata uses `metadata.shapeType` — now supports: `circle | rectangle | arrow | triangle | diamond | star | hexagon | pentagon`
 - Book structure uses `metadata.sections[]` (Sections → Pages). Old `metadata.pages[]` is migrated on first open.
 - Tiptap stores content as HTML string in `BookPage.content`
 - MiniMap snaps to corners on drag release (YouTube PiP behavior) — do not allow free placement
 
 ## Performance Rules
-- Drag operations: mutate `elementRef.style` directly, commit to Zustand on pointerup only
+- Drag operations: mutate DOM directly (`elementRef.style` or `document.querySelector` for multi-drag). Commit to Zustand on pointerup only.
 - Viewport: stored in `vpRef`, synced to Zustand on 100ms debounce
 - All canvas object components are wrapped in `React.memo()`
 - Use `setPointerCapture()` for all drag interactions

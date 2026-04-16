@@ -1,9 +1,15 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Freeform Pro — Infinite Canvas',
-  description: 'A professional infinite canvas for ideas, notes, and creativity.',
+  title: 'MindCanvas — Spatial Creative Workspace',
+  description: 'A premium infinite canvas designed for fluid thinking, visual organization, and seamless collaboration.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export default function RootLayout({

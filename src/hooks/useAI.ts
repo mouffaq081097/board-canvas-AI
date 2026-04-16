@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useCanvasStore } from '@/store/canvasStore';
 import { CanvasObject } from '@/types/canvas';
 
-export type AIAction = 'group' | 'summarize' | 'brainstorm' | 'ocr' | 'roadmap' | 'research';
+export type AIAction = 'group' | 'summarize' | 'brainstorm' | 'ocr' | 'roadmap' | 'research' | 'sketch';
 
 export function useAI() {
   const { selectedIds, objects, addObject, addObjects, addConnection, batchUpdateObjects, updateObject } = useCanvasStore();

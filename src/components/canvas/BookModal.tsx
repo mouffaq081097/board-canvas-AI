@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   X,
@@ -119,7 +119,7 @@ export default function BookModal({ object, onClose }: Props) {
   }, [liveObject.metadata?.sections, initialized]);
 
   // Derive active section and page from live state
-  const sections = React.useMemo(() => liveObject.metadata?.sections ?? [], [liveObject.metadata?.sections]);
+  const sections = useMemo(() => liveObject.metadata?.sections ?? [], [liveObject.metadata?.sections]);
   const activeSection = sections.find((s) => s.id === activeSectionId) ?? sections[0];
   const activePage = activeSection?.pages.find((p) => p.id === activePageId) ?? activeSection?.pages[0];
 
@@ -284,7 +284,7 @@ export default function BookModal({ object, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[500] flex items-center justify-center p-2 md:p-4"
+      className="fixed inset-0 z-[500] flex items-center justify-center p-0 md:p-4"
       onPointerDown={(e) => e.stopPropagation()}
     >
       {/* Backdrop */}
@@ -302,23 +302,23 @@ export default function BookModal({ object, onClose }: Props) {
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 20 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="relative z-10 w-full max-w-[98vw] h-[96vh] flex flex-col bg-white rounded-[2rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] overflow-hidden"
+        className="relative z-10 w-full h-full md:max-w-[98vw] md:h-[96vh] flex flex-col bg-white md:rounded-[2rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white/95 backdrop-blur-xl z-20 flex-shrink-0">
-          <div className="flex items-center gap-4 flex-1">
+        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-gray-100 bg-white/95 backdrop-blur-xl z-20 flex-shrink-0">
+          <div className="flex items-center gap-3 md:gap-4 flex-1">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md transform rotate-3 hover:rotate-0 transition-transform flex-shrink-0"
+              className="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center shadow-md transform rotate-3 hover:rotate-0 transition-transform flex-shrink-0"
               style={{ background: object.style.backgroundColor || '#4f46e5' }}
             >
-              <BookIcon className="text-white w-5 h-5" />
+              <BookIcon className="text-white w-4 h-4 md:w-5 md:h-5" />
             </div>
             <div className="flex flex-col flex-1 max-w-2xl">
               <input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={handleTitleBlur}
-                className="text-gray-900 font-black text-xl bg-transparent border-none outline-none placeholder-gray-300 w-full truncate"
+                className="text-gray-900 font-black text-lg md:text-xl bg-transparent border-none outline-none placeholder-gray-300 w-full truncate"
                 placeholder="Untitled Book"
               />
               <div className="flex items-center gap-2 mt-0.5">

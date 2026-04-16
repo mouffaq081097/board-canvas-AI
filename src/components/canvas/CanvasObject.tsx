@@ -33,7 +33,7 @@ const ResizeHandle = ({ pos, onPointerDown }: { pos: string; onPointerDown: (e: 
   return (
     <div
       data-resize-handle="true"
-      className={`absolute w-4 h-4 bg-white border-2 border-indigo-500 rounded-full z-50 pointer-events-auto hover:bg-indigo-50 transition-colors hover:shadow-[0_0_0_3px_rgba(99,102,241,0.3)] ${positionClasses}`}
+      className={`absolute resize-handle w-4 h-4 bg-white border-2 border-indigo-500 rounded-full z-50 pointer-events-auto hover:bg-indigo-50 transition-colors hover:shadow-[0_0_0_3px_rgba(99,102,241,0.3)] ${positionClasses}`}
       onPointerDown={(e) => onPointerDown(e, pos)}
     />
   );
@@ -55,8 +55,9 @@ function CanvasObject({ objectId }: Props) {
   const setIsBookModalOpen = useCanvasStore(s => s.setIsBookModalOpen);
   const isLocked = useCanvasStore(s => {
     const obj = s.objects.find(o => o.id === objectId);
-    return s.layerLockEnabled && (obj?.locked ?? false);
+    return obj?.locked ?? false;
   });
+  const isMultiSelect = useCanvasStore(s => s.selectedIds.length > 1);
 
   const elementRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{
@@ -92,16 +93,24 @@ function CanvasObject({ objectId }: Props) {
   // Capture-phase handler: fires before any child stopPropagation, enabling drag from anywhere on the object
   const handlePointerDownCapture = (e: React.PointerEvent) => {
     if (activeTool === 'pen' || activeTool === 'eraser') return;
-    if (isLocked && activeTool !== 'arrow') {
-      // Allow selection of locked objects so the user can unlock them via the context menu
-      e.stopPropagation();
-      selectObject(objectId, e.shiftKey);
-      return;
+
+    if (isLocked) {
+      if (activeTool !== 'connector') {
+        // Allow selection of locked objects so the user can unlock them via the context menu
+        e.stopPropagation();
+        selectObject(objectId, e.shiftKey);
+      }
+      return; // CRITICAL: Stop here. Locked objects cannot be interacted with further.
     }
 
-    if (activeTool === 'arrow') {
+    if (activeTool === 'connector') {
+      // Let anchor points handle their own events — don't intercept them here
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-anchor-point]')) return;
+
       e.stopPropagation();
       if (!connectingFrom) {
+        // Clicking the object body starts from the nearest logical anchor (right fallback)
         setConnectingFrom({ id: objectId, anchor: 'right' });
       } else if (connectingFrom.id !== objectId) {
         addConnection({
@@ -122,11 +131,14 @@ function CanvasObject({ objectId }: Props) {
         ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(target.tagName) ||
         target.isContentEditable;
 
-      const isControl = target.closest('[data-resize-handle]') || 
-                        target.closest('[data-rotate-handle]') || 
+      const isControl = target.closest('[data-resize-handle]') ||
+                        target.closest('[data-rotate-handle]') ||
                         target.closest('[data-anchor-point]');
 
-      if (!isEditable && !isControl) {
+      // Explicit drag handle always triggers drag regardless of editable children
+      const isDragHandle = !!target.closest('[data-drag-handle]');
+
+      if (isDragHandle || (!isEditable && !isControl)) {
         // Drag from anywhere on the object — stop propagation so canvas doesn't also handle it
         e.stopPropagation();
         selectObject(objectId, e.shiftKey);
@@ -283,10 +295,15 @@ function CanvasObject({ objectId }: Props) {
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
     if (object.type === 'book') {
-      e.stopPropagation();
       setFocusedObjectId(object.id);
       setIsBookModalOpen(true);
+    } else if (object.type === 'sticky' || object.type === 'note' || object.type === 'shape') {
+      // If locked, we don't allow editing the inline text
+      if (isLocked) return;
+      useCanvasStore.getState().setEditingObjectId(object.id);
     }
   };
 
@@ -301,15 +318,15 @@ function CanvasObject({ objectId }: Props) {
         rotate: object.rotation || 0
       }}
       transition={{ type: 'spring', stiffness: 400, damping: 22 }}
-      className={`absolute canvas-obj group ${isSelected ? 'selection-ring' : ''} ${isPulsing || (connectingFrom?.id === objectId) ? 'animate-pulse-border ring-2 ring-indigo-500 ring-offset-2' : ''} ${isLocked ? 'opacity-60' : ''}`}
+      className={`absolute canvas-obj group ${isSelected ? 'selection-ring' : ''} ${isPulsing || (connectingFrom?.id === objectId) ? 'animate-pulse-border ring-2 ring-indigo-500 ring-offset-2' : ''} ${isLocked ? '' : ''}`}
       style={{
         left: object.x,
         top: object.y,
         width: object.width,
         height: object.height,
-        opacity: isLocked ? 0.6 : (object.style.opacity ?? 1),
+        opacity: object.style.opacity ?? 1, 
         zIndex: isSelected ? 100 : (object.type === 'shape' ? 0 : 10),
-        cursor: isLocked ? 'not-allowed' : activeTool === 'pointer' ? 'grab' : 'default',
+        cursor: isLocked ? 'pointer' : activeTool === 'pointer' ? 'grab' : 'default', // Changed to pointer for locked objects so users know they can click/double-click
         willChange: 'transform',
       }}
       onPointerDownCapture={handlePointerDownCapture}
@@ -319,9 +336,14 @@ function CanvasObject({ objectId }: Props) {
       onPointerEnter={() => setIsHovered(true)}
       onPointerLeave={() => setIsHovered(false)}
     >
+      {/* Removed the dimmer/backdrop-blur overlay for locked state so content is perfectly clear */}
+
       {isLocked && (
-        <div className="absolute top-1 right-1 z-50 pointer-events-none">
-          <Lock size={10} className="text-gray-500 opacity-70" />
+        <div className="absolute top-2 right-2 z-[100] pointer-events-none flex items-center justify-center">
+          <div className="absolute w-6 h-6 bg-amber-400 rounded-full animate-ping opacity-20" />
+          <div className="w-6 h-6 bg-amber-100 border border-amber-300 rounded-full flex items-center justify-center shadow-sm">
+            <Lock size={12} className="text-amber-600" />
+          </div>
         </div>
       )}
 
@@ -347,7 +369,7 @@ function CanvasObject({ objectId }: Props) {
         <ImageObject object={object} isSelected={isSelected} onUpdate={(p) => updateObject(object.id, p)} />
       )}
 
-      {isSelected && (
+      {(isSelected || activeTool === 'connector') && (
         <>
           <AnchorPoint objectId={objectId} side="top" />
           <AnchorPoint objectId={objectId} side="right" />
@@ -356,7 +378,7 @@ function CanvasObject({ objectId }: Props) {
         </>
       )}
 
-      {isSelected && object.type !== 'book' && (
+      {isSelected && !isMultiSelect && object.type !== 'book' && (
         <>
           {/* W/H size input pill */}
           <div
